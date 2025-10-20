@@ -58,24 +58,22 @@ serve(async (req) => {
       .eq("user_id", user.id);
     if (catError) throw new Error(`Failed to fetch categories: ${catError.message}`);
 
-    // --- Null Checks Sederhana ---
     const safeTransactions = transactions || [];
     const safeCategories = categories || [];
-    // --- Akhir Null Checks ---
 
     // 5. Proses Data Keuangan (Perhitungan)
     const totalIncome = safeTransactions
       .filter((t: any) => t.type === "income")
-      .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0); // Tambah fallback 0
+      .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
     const totalExpense = safeTransactions
       .filter((t: any) => t.type === "expense")
-      .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0); // Tambah fallback 0
+      .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
 
-    const categoryMap = new Map<string, number>(); // Tipe eksplisit
+    const categoryMap = new Map<string, number>();
     safeTransactions.forEach((t: any) => {
       if (t.type === "expense" && t.category_id) {
         const current = categoryMap.get(t.category_id) || 0;
-        categoryMap.set(t.category_id, current + Number(t.amount || 0)); // Tambah fallback 0
+        categoryMap.set(t.category_id, current + Number(t.amount || 0));
       }
     });
 
@@ -85,13 +83,13 @@ serve(async (req) => {
       if (amount > highestAmount) {
         highestAmount = amount;
         const cat = safeCategories.find((c: any) => c.id === catId);
-        highestCategory = cat?.name || "Uncategorized"; // Handle jika kategori tidak ditemukan
+        highestCategory = cat?.name || "Uncategorized";
       }
     });
 
     const balance = totalIncome - totalExpense;
 
-    const formatIDR = (amount: number) => { /* ... fungsi tetap sama ... */
+    const formatIDR = (amount: number) => {
         return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
     };
 
@@ -105,7 +103,12 @@ serve(async (req) => {
 Berikan 3-5 tips praktis untuk meningkatkan kesehatan keuangan dalam bahasa Indonesia. Jawaban harus singkat, jelas, dan actionable. Format dalam bentuk poin-poin dengan emoji yang relevan.`;
 
     // 7. Panggil Google AI API
-    const googleAiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GOOGLE_AI_API_KEY}`;
+    // --- PERUBAHAN DI SINI ---
+    // Ganti 'gemini-pro' menjadi 'gemini-1.5-flash-latest' atau model lain yang valid
+    const modelName = "gemini-1.5-flash-latest"; // Atau coba 'gemini-1.0-pro' jika flash tidak tersedia/diinginkan
+    const googleAiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GOOGLE_AI_API_KEY}`;
+    // --- AKHIR PERUBAHAN ---
+
     const googleAiPayload = {
         contents: [ { parts: [ { text: prompt } ] } ],
         generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
@@ -118,16 +121,14 @@ Berikan 3-5 tips praktis untuk meningkatkan kesehatan keuangan dalam bahasa Indo
       }
     );
 
-    // --- Penanganan Error Google AI Lebih Detail ---
     if (!googleAiResponse.ok) {
       let errorBody = "Could not read error response body.";
       try {
           errorBody = await googleAiResponse.text();
       } catch (_) { /* Abaikan jika body tidak bisa dibaca */ }
       console.error("Google AI API error:", googleAiResponse.status, errorBody);
-      throw new Error(`Google AI API failed with status ${googleAiResponse.status}: ${errorBody.substring(0, 200)}`); // Batasi panjang pesan error
+      throw new Error(`Google AI API failed with status ${googleAiResponse.status}: ${errorBody.substring(0, 200)}`);
     }
-    // --- Akhir Penanganan Error ---
 
     const googleAiData = await googleAiResponse.json();
 
@@ -140,8 +141,7 @@ Berikan 3-5 tips praktis untuk meningkatkan kesehatan keuangan dalam bahasa Indo
     );
 
   } catch (error) {
-    // Log error internal sebelum mengirim respons 500
-    console.error("Error in financial-advice function:", error);
+    console.error("Error in financial-advice function:", error); // Tetap log error server
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Internal Server Error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
