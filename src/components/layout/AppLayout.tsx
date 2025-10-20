@@ -3,7 +3,8 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
-import { FloatingActionButton } from "./FloatingActionButton"; // <-- IMPORT BARU
+import { FloatingActionButton } from "./FloatingActionButton";
+import { cn } from "@/lib/utils"; // <-- Import cn
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,10 +13,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <div className="flex flex-1 flex-col">
           <AppHeader />
-          <main className="flex-1 p-4 md:p-6 animate-fade-in">
+          {/* --- Perbaikan Padding --- */}
+          <main className={cn(
+              "flex-1 p-4 md:p-6 animate-fade-in", // Padding default (p-4 mobile, p-6 desktop)
+              // "px-4 md:px-6 py-6" // Alternatif: Atur padding X dan Y terpisah jika perlu
+          )}>
             {children}
           </main>
-          <FloatingActionButton /> {/* <-- TAMBAHKAN DI SINI */}
+          {/* --- Akhir Perbaikan Padding --- */}
+          <FloatingActionButton />
         </div>
       </div>
     </SidebarProvider>

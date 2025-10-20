@@ -1,13 +1,11 @@
 // src/pages/Dashboard.tsx
 
-import { useState, useEffect } from "react"; // <-- IMPORT useEffect
-import { useQueryClient } from "@tanstack/react-query"; // <-- IMPORT useQueryClient
-import { supabase } from "@/integrations/supabase/client"; // <-- IMPORT supabase client
-import { useAuth } from "@/contexts/AuthContext"; // <-- IMPORT useAuth
-
-// ... (Import komponen lainnya tetap sama) ...
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { CategorySummaryTable } from "@/components/dashboard/CategorySummaryTable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // <-- Pastikan CardDescription diimpor
 import { formatCurrency } from "@/utils/currency";
 import { AIFinancialSuggestion } from "@/components/dashboard/AIFinancialSuggestion";
 import {
@@ -30,220 +28,170 @@ import { useChartData } from "@/hooks/useChartData.ts";
 import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart.tsx";
 import { ComparisonBarChart } from "@/components/dashboard/ComparisonBarChart.tsx";
 import { DailyTrendLineChart } from "@/components/dashboard/DailyTrendLineChart.tsx";
-
+import { Skeleton } from "@/components/ui/skeleton"; // <-- Import Skeleton
 
 export default function Dashboard() {
-
   const [period, setPeriod] = useState<string>("this-month");
-  const queryClient = useQueryClient(); // <-- Dapatkan query client
-  const { user } = useAuth(); // <-- Dapatkan user info
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { stats, isLoading: loadingStats } = useDashboardStats(period);
+  const { chartData, isLoading: loadingCharts } = useChartData();
+  const isDataLoading = loadingStats || loadingCharts;
 
-  // Hook untuk Summary Stats
-  const { stats, isLoading: loadingStats } = useDashboardStats(period); // Ganti nama variabel loading
-
-  // Hook untuk Chart Data
-  const { chartData, isLoading: loadingCharts } = useChartData(); // Ganti nama variabel loading
-
-  const isDataLoading = loadingStats || loadingCharts; // Gunakan nama baru
-
-  // --- Realtime Subscription Effect ---
+  // --- Realtime Subscription Effect (Tetap Sama) ---
   useEffect(() => {
-    // Pastikan user sudah ada sebelum membuat subscription
     if (!user) return;
-
-    // Definisikan channel subscription
     const channel = supabase
       .channel('transactions-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*', // Dengarkan semua event (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'transactions',
-          // Filter hanya untuk transaksi milik user yang sedang login
-          filter: `user_id=eq.${user.id}`
-        },
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
         (payload) => {
           console.log('Perubahan terdeteksi pada transaksi:', payload);
-          // Invalidate query data chart agar React Query mengambil data baru
           queryClient.invalidateQueries({ queryKey: ['dashboard_charts'] });
-          // Invalidate juga query stats jika diperlukan (misalnya jika stats berubah signifikan)
           queryClient.invalidateQueries({ queryKey: ['dashboard_stats', period] });
-          // Invalidate query ringkasan kategori
-          queryClient.invalidateQueries({ queryKey: ['transactions'] }); // Asumsi tabel ringkasan pakai query 'transactions'
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
       )
       .subscribe();
-
     console.log("Subscribing to transactions changes...");
-
-    // Cleanup function: Hapus subscription saat komponen unmount
     return () => {
       console.log("Unsubscribing from transactions changes...");
       supabase.removeChannel(channel);
     };
-
-    // Jalankan effect ini ketika queryClient atau user berubah
   }, [queryClient, user, period]);
   // --- Akhir Realtime Subscription Effect ---
 
-
   const statCards = [
-     // ... (Definisi statCards tetap sama) ...
-    {
-      title: "Total Income",
-      value: stats.totalIncome,
-      icon: TrendingUp,
-      gradient: "gradient-success",
-      textColor: "text-success",
-    },
-    {
-      title: "Total Expense",
-      value: stats.totalExpense,
-      icon: TrendingDown,
-      gradient: "gradient-danger",
-      textColor: "text-danger",
-    },
-    {
-      title: "Bank Balance",
-      value: stats.totalBalance,
-      icon: Wallet,
-      gradient: "gradient-primary",
-      textColor: "text-primary",
-    },
-    {
-      title: "Total Assets",
-      value: stats.totalAssets,
-      icon: Briefcase,
-      gradient: "gradient-primary",
-      textColor: "text-primary",
-    },
+    { title: "Total Income", value: stats.totalIncome, icon: TrendingUp, gradient: "gradient-success", textColor: "text-success" },
+    { title: "Total Expense", value: stats.totalExpense, icon: TrendingDown, gradient: "gradient-danger", textColor: "text-danger" },
+    { title: "Bank Balance", value: stats.totalBalance, icon: Wallet, gradient: "gradient-primary", textColor: "text-primary" },
+    { title: "Total Assets", value: stats.totalAssets, icon: Briefcase, gradient: "gradient-primary", textColor: "text-primary" },
   ];
 
-  if (isDataLoading && !chartData) { // Tampilkan loading hanya jika belum ada data chart awal
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
+  // --- Skeleton Loading untuk seluruh halaman jika data awal belum ada ---
+  if (isDataLoading && !chartData?.trendData.length && !stats.totalIncome && !stats.totalExpense) {
+     return (
+       <div className="space-y-6">
+         {/* Skeleton Header */}
+         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+           <Skeleton className="h-9 w-48" />
+           <Skeleton className="h-10 w-[180px]" />
+         </div>
+         {/* Skeleton Stats Grid */}
+         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+         </div>
+         {/* Skeleton Chart Section */}
+         <Skeleton className="h-96 w-full" />
+         {/* Skeleton Table */}
+         <Skeleton className="h-64 w-full" />
+         {/* Skeleton Welcome & AI */}
+         <div className="grid gap-4 md:grid-cols-2">
+           <Skeleton className="h-48 w-full" />
+           <Skeleton className="h-48 w-full" />
+         </div>
+       </div>
+     );
+   }
+   // --- Akhir Skeleton Loading ---
 
-  // --- Render JSX (Struktur Umum Tetap Sama) ---
+
   return (
     <div className="space-y-6">
-      {/* Header with period filter */}
+      {/* Header with period filter (Tetap Sama) */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <Select value={period} onValueChange={setPeriod}>
-           {/* ... (Select options tetap sama) ... */}
-           <SelectTrigger className="w-[180px]">
-             <Calendar className="mr-2 h-4 w-4" />
-             <SelectValue placeholder="Select period" />
-           </SelectTrigger>
-           <SelectContent>
-             <SelectItem value="today">Today</SelectItem>
-             <SelectItem value="this-week">This Week</SelectItem>
-             <SelectItem value="this-month">This Month</SelectItem>
-             <SelectItem value="this-year">This Year</SelectItem>
-             {/* <SelectItem value="custom-range" disabled>Custom Range</SelectItem> */}
-           </SelectContent>
+          <SelectTrigger className="w-full sm:w-[180px]"> {/* <-- Tambah w-full untuk mobile */}
+            <Calendar className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Select period" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="today">Hari Ini</SelectItem>
+            <SelectItem value="this-week">Minggu Ini</SelectItem>
+            <SelectItem value="this-month">Bulan Ini</SelectItem>
+            <SelectItem value="this-year">Tahun Ini</SelectItem>
+          </SelectContent>
         </Select>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid (Tetap Sama, sudah menggunakan Card) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          // Card rendering tetap sama, tapi gunakan loadingStats jika ingin skeleton per card
           <Card key={stat.title} className="shadow-medium hover:shadow-large transition-shadow animate-slide-up">
-            {/* ... (Card content tetap sama) ... */}
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
-               <CardTitle className="text-sm font-medium text-muted-foreground">
-                 {stat.title}
-               </CardTitle>
-               <div className={`rounded-full p-2 ${stat.gradient}`}>
-                 <stat.icon className="h-4 w-4 text-white" />
-               </div>
-             </CardHeader>
-             <CardContent>
-               <div className={`text-2xl font-bold ${stat.textColor}`}>
-                 {loadingStats ? "..." : formatCurrency(stat.value)} {/* Tampilkan loading kecil */}
-               </div>
-             </CardContent>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </CardTitle>
+              <div className={`rounded-full p-2 ${stat.gradient}`}>
+                <stat.icon className="h-4 w-4 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${stat.textColor}`}>
+                {loadingStats ? <Skeleton className="h-8 w-3/4 inline-block" /> : formatCurrency(stat.value)}
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Chart Section */}
-      {/* Chart akan otomatis update karena data dari useChartData berubah */}
-       {(period === 'this-month' || period === 'this-year') && chartData ? (
-        <div className="space-y-4">
-            <h2 className="text-xl font-bold">Visualisasi Keuangan</h2>
-            <div className="grid gap-4 lg:grid-cols-2">
-                {/* Komponen Chart tetap sama, isLoading diambil dari loadingCharts */}
-                <CategoryPieChart
-                    data={chartData.incomePieData}
-                    type="income"
-                    isLoading={loadingCharts && !chartData.incomePieData} // Tampilkan skeleton hanya jika data belum ada
-                />
-                <CategoryPieChart
-                    data={chartData.expensePieData}
-                    type="expense"
-                    isLoading={loadingCharts && !chartData.expensePieData}
-                />
-                <ComparisonBarChart
-                    data={chartData.comparisonData}
-                    isLoading={loadingCharts && !chartData.comparisonData}
-                />
-                <div className="lg:col-span-2">
-                    <DailyTrendLineChart
-                        data={chartData.trendData}
-                        isLoading={loadingCharts && !chartData.trendData} // Tampilkan skeleton hanya jika data belum ada
-                    />
-                </div>
-            </div>
-        </div>
-      ) : (
-         // ... (Card placeholder tetap sama) ...
-          <Card>
-             <CardHeader>
-                  <CardTitle className="text-lg">Financial Overview</CardTitle>
-             </CardHeader>
-             <CardContent>
-                 <div className="pt-4 text-sm text-muted-foreground">
-                     Grafik detail tersedia untuk periode <strong>This Month</strong> atau <strong>This Year</strong>.
-                 </div>
-             </CardContent>
-           </Card>
-      )}
+      {/* --- Chart Section Refactored --- */}
+      {/* Selalu render grid, biarkan komponen chart menangani loading/placeholder internal */}
+      <div className="grid gap-4 lg:grid-cols-2">
+          {/* Pie Charts */}
+          <CategoryPieChart
+              data={chartData.incomePieData}
+              type="income"
+              isLoading={loadingCharts && !chartData.incomePieData?.length} // Loading jika belum ada data
+          />
+          <CategoryPieChart
+              data={chartData.expensePieData}
+              type="expense"
+              isLoading={loadingCharts && !chartData.expensePieData?.length}
+          />
 
+          {/* Bar Chart - ambil lebar penuh jika pie chart tidak ada */}
+          <div className={(chartData.incomePieData?.length || chartData.expensePieData?.length) ? "lg:col-span-1" : "lg:col-span-2"}>
+            <ComparisonBarChart
+                data={chartData.comparisonData}
+                isLoading={loadingCharts && !chartData.comparisonData?.length}
+            />
+          </div>
 
-      {/* Tabel Ringkasan Kategori */}
-      <div className="mt-6">
-          {/* Komponen Tabel tetap sama, ia akan re-render jika data dari useTransactions berubah */}
-          <CategorySummaryTable period={period} />
+          {/* Line Chart - selalu ambil lebar penuh */}
+          <div className="lg:col-span-2">
+              <DailyTrendLineChart
+                  data={chartData.trendData}
+                  isLoading={loadingCharts && !chartData.trendData?.length} // Loading jika belum ada data
+              />
+          </div>
       </div>
+      {/* --- Akhir Chart Section --- */}
 
-      {/* Welcome Card & AI Suggestion */}
-      {/* ... (Bagian ini tetap sama) ... */}
+
+      {/* Tabel Ringkasan Kategori (Sudah menggunakan Card di dalamnya) */}
+      <CategorySummaryTable period={period} />
+
+      {/* Welcome Card & AI Suggestion (Tetap Sama) */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="shadow-medium">
-          {/* ... Welcome Card content ... */}
-           <CardContent className="pt-6">
-             <div className="text-center space-y-4">
-               <h2 className="text-2xl font-semibold">Selamat Datang di Fintrack M7! 🎉</h2>
-               <p className="text-muted-foreground">
-                 Mulai lacak keuangan Anda dengan menambahkan transaksi, mengelola kategori,
-                 dan memantau aset Anda.
-               </p>
-               {/* Anda bisa menambahkan Link atau onClick handler di sini */}
-               <div className="flex gap-3 justify-center flex-wrap">
-                 <Button className="gradient-primary" >Tambah Transaksi</Button> {/* Tambahkan onClick jika perlu */}
-                 <Button variant="outline" >Lihat Laporan</Button> {/* Tambahkan onClick jika perlu */}
-               </div>
-             </div>
-           </CardContent>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h2 className="text-2xl font-semibold">Selamat Datang di Fintrack M7! 🎉</h2>
+              <p className="text-muted-foreground">
+                Mulai lacak keuangan Anda dengan menambahkan transaksi, mengelola kategori,
+                dan memantau aset Anda.
+              </p>
+              <div className="flex gap-3 justify-center flex-wrap">
+                 {/* Anda bisa menambahkan Link atau onClick handler di sini */}
+                 <Button className="gradient-primary" >Tambah Transaksi</Button>
+                 <Button variant="outline" >Lihat Laporan</Button>
+              </div>
+            </div>
+          </CardContent>
         </Card>
-
         <AIFinancialSuggestion />
       </div>
 

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
 
@@ -17,25 +17,25 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    /* Indigo primary color #6366F1 */
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    
-    /* Purple secondary color #8B5CF6 */
-    --secondary: 258 90% 66%;
-    --secondary-foreground: 0 0% 100%;
+    /* --- WARNA BARU: Biru Segar --- */
+    --primary: 217 91% 60%; /* Blue-500 */
+    --primary-foreground: 0 0% 100%; /* Putih */
+
+    --secondary: 204 86% 53%; /* Sky-500 */
+    --secondary-foreground: 0 0% 100%; /* Putih */
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 258 90% 66%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 204 86% 53%; /* Samakan dengan secondary */
+    --accent-foreground: 0 0% 100%; /* Putih */
+    /* --- AKHIR WARNA BARU --- */
 
-    /* Green for income */
+    /* Green for income (Tetap) */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Red for expense */
+    /* Red for expense (Tetap) */
     --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
 
@@ -44,62 +44,64 @@ All colors MUST be HSL.
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --ring: 217 91% 60%; /* Sesuaikan ring dengan primary baru */
 
     --radius: 0.75rem;
 
-    /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(258 90% 66%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 46%) 100%);
-    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 84% 70%) 100%);
+    /* --- GRADIENT BARU --- */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    /* --- AKHIR GRADIENT BARU --- */
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)) 0%, hsl(142 76% 46%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)) 0%, hsl(0 84% 70%) 100%);
 
-    /* Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(239 84% 67% / 0.1);
-    --shadow-medium: 0 4px 16px -4px hsl(239 84% 67% / 0.15);
-    --shadow-large: 0 8px 32px -8px hsl(239 84% 67% / 0.2);
+    /* Shadows (Tetap, tapi warna biasnya akan berubah mengikuti primary baru jika tidak di-hardcode) */
+     /* Ganti warna bias shadow agar lebih netral atau sesuai biru */
+    --shadow-soft: 0 2px 8px -2px hsl(217 91% 60% / 0.1);
+    --shadow-medium: 0 4px 16px -4px hsl(217 91% 60% / 0.15);
+    --shadow-large: 0 8px 32px -8px hsl(217 91% 60% / 0.2);
 
-    /* Sidebar */
+
+    /* --- SIDEBAR DENGAN WARNA BARU --- */
     --sidebar-background: 0 0% 99%;
     --sidebar-foreground: 222.2 47.4% 11.2%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 217 91% 60%; /* Primary Baru */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent: 220 14% 96%; /* Tetap muted atau bisa diubah ke biru muda */
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-ring: 217 91% 60%; /* Ring Baru */
+    /* --- AKHIR SIDEBAR --- */
   }
 
   .dark {
-    /* Dark background #0F172A */
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    /* Dark surface #1E293B */
     --card: 217 33% 17%;
     --card-foreground: 210 40% 98%;
 
     --popover: 217 33% 17%;
     --popover-foreground: 210 40% 98%;
 
-    /* Lighter indigo for dark mode #818CF8 */
-    --primary: 239 84% 75%;
-    --primary-foreground: 222 47% 11%;
-    
-    /* Lighter purple for dark mode #A78BFA */
-    --secondary: 258 90% 76%;
-    --secondary-foreground: 222 47% 11%;
+    /* --- WARNA BARU (DARK MODE) --- */
+    --primary: 217 94% 69%; /* Lighter Blue-400 */
+    --primary-foreground: 222 47% 11%; /* Teks gelap */
+
+    --secondary: 204 94% 60%; /* Lighter Sky-400 */
+    --secondary-foreground: 222 47% 11%; /* Teks gelap */
 
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 258 90% 76%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 204 94% 60%; /* Samakan dengan secondary */
+    --accent-foreground: 222 47% 11%; /* Teks gelap */
+     /* --- AKHIR WARNA BARU (DARK MODE) --- */
 
-    /* Green for income (adjusted for dark) */
+    /* Green for income (Tetap) */
     --success: 142 76% 46%;
     --success-foreground: 0 0% 100%;
 
-    /* Red for expense (adjusted for dark) */
+    /* Red for expense (Tetap) */
     --danger: 0 84% 65%;
     --danger-foreground: 0 0% 100%;
 
@@ -108,27 +110,30 @@ All colors MUST be HSL.
 
     --border: 217 33% 24%;
     --input: 217 33% 24%;
-    --ring: 239 84% 75%;
+    --ring: 217 94% 69%; /* Sesuaikan ring */
 
-    /* Custom gradients for dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 75%) 0%, hsl(258 90% 76%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 46%) 0%, hsl(142 76% 56%) 100%);
-    --gradient-danger: linear-gradient(135deg, hsl(0 84% 65%) 0%, hsl(0 84% 75%) 100%);
+    /* --- GRADIENT BARU (DARK MODE) --- */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    /* --- AKHIR GRADIENT BARU (DARK MODE) --- */
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)) 0%, hsl(142 76% 56%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)) 0%, hsl(0 84% 75%) 100%);
 
-    /* Shadows for dark mode */
-    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
-    --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
-    --shadow-large: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
+    /* Shadows (Tetap, tapi warna biasnya akan berubah) */
+     /* Ganti warna bias shadow agar lebih netral atau sesuai biru */
+    --shadow-soft: 0 2px 8px -2px hsl(217 94% 69% / 0.1);
+    --shadow-medium: 0 4px 16px -4px hsl(217 94% 69% / 0.15);
+    --shadow-large: 0 8px 32px -8px hsl(217 94% 69% / 0.2);
 
-    /* Sidebar */
+    /* --- SIDEBAR (DARK MODE) --- */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 239 84% 75%;
+    --sidebar-primary: 217 94% 69%; /* Primary Baru (Dark) */
     --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 217 33% 20%;
+    --sidebar-accent: 217 33% 20%; /* Tetap muted gelap atau bisa diubah */
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 24%;
-    --sidebar-ring: 239 84% 75%;
+    --sidebar-ring: 217 94% 69%; /* Ring Baru (Dark) */
+    /* --- AKHIR SIDEBAR (DARK MODE) --- */
   }
 }
 
@@ -142,71 +147,42 @@ All colors MUST be HSL.
   }
 }
 
+/* Utilities (gradient-primary sudah otomatis menggunakan var baru) */
 @layer utilities {
   .gradient-primary {
     background: var(--gradient-primary);
-  }
-  
-  .gradient-success {
-    background: var(--gradient-success);
-  }
-  
-  .gradient-danger {
-    background: var(--gradient-danger);
+    /* Ganti warna teks jika perlu kontras dengan gradient baru */
+    @apply text-primary-foreground;
   }
 
+  .gradient-success {
+    background: var(--gradient-success);
+     @apply text-success-foreground;
+  }
+
+  .gradient-danger {
+    background: var(--gradient-danger);
+     @apply text-danger-foreground;
+  }
+
+  /* Shadow utilities (otomatis menggunakan var baru jika shadow di base layer diubah) */
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
-
   .shadow-medium {
     box-shadow: var(--shadow-medium);
   }
-
   .shadow-large {
     box-shadow: var(--shadow-large);
   }
 
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
-  }
-
-  .animate-slide-up {
-    animation: slide-up 0.4s ease-out;
-  }
-
-  .animate-scale-in {
-    animation: scale-in 0.2s ease-out;
-  }
+  /* Animasi tetap sama */
+  .animate-fade-in { animation: fade-in 0.3s ease-out; }
+  .animate-slide-up { animation: slide-up 0.4s ease-out; }
+  .animate-scale-in { animation: scale-in 0.2s ease-out; }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes scale-in {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
+/* Keyframes tetap sama */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
