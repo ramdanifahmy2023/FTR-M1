@@ -64,38 +64,50 @@ export function useChartData() {
                 t.transaction_date >= currentMonthStart && t.transaction_date <= currentMonthEnd
             );
             
+            // Menggunakan Map dengan ID unik (atau string unik) sebagai key
             const incomeMap = new Map<string, number>();
             const expenseMap = new Map<string, number>();
 
             currentMonthTransactions.forEach(t => {
                 const amount = Number(t.amount);
-                if (t.category_id) {
-                    const map = t.type === 'income' ? incomeMap : expenseMap;
-                    const current = map.get(t.category_id!) || 0;
-                    map.set(t.category_id!, current + amount);
-                }
+                const isIncome = t.type === 'income';
+                const map = isIncome ? incomeMap : expenseMap;
+                
+                // Gunakan category_id atau string unik untuk uncategorized
+                const mapKey = t.category_id || (isIncome ? "UNCAT_INCOME_KEY" : "UNCAT_EXPENSE_KEY");
+
+                const current = map.get(mapKey) || 0;
+                map.set(mapKey, current + amount);
             });
             
             const mapToPieData = (map: Map<string, number>, transactionType: 'income' | 'expense'): PieChartData[] => {
                 return Array.from(map.entries())
-                    .map(([categoryId, amount]) => {
-                        const category = allUniqueCategories.find(c => c.id === categoryId);
-                        
-                        let name = category?.name;
+                    .map(([mapKey, amount]) => {
                         const typeLabel = transactionType === 'income' ? 'Pemasukan' : 'Pengeluaran';
-
-                        // PERBAIKAN KRITIS: Memastikan 'Uncategorized' memiliki nama unik untuk Recharts key.
-                        if (!name) {
+                        let name: string;
+                        let color: string;
+                        let icon: string | null = null;
+                        
+                        if (mapKey === "UNCAT_INCOME_KEY" || mapKey === "UNCAT_EXPENSE_KEY") {
+                            // Data Uncategorized
                             name = `Uncategorized (${typeLabel})`;
+                            color = transactionType === 'income' ? 'hsl(142 76% 56%)' : 'hsl(0 84% 70%)'; // Warna default
+                        } else {
+                            // Data Terkategori
+                            const category = allUniqueCategories.find(c => c.id === mapKey);
+                            name = category?.name || `Uncategorized (${typeLabel})`;
+                            color = category?.color || (transactionType === 'income' ? 'hsl(142 76% 56%)' : 'hsl(0 84% 70%)');
+                            icon = category?.icon || null;
                         }
 
                         return {
                             name: name,
                             value: amount,
-                            color: category?.color || (transactionType === 'income' ? 'hsl(var(--success))' : 'hsl(var(--danger))'),
-                            icon: category?.icon || null,
+                            color: color,
+                            icon: icon,
                         };
                     })
+                    .filter(item => item.value > 0) // Pastikan hanya data bernilai > 0 yang masuk
                     .sort((a, b) => b.value - a.value); // Sort descending
             };
 
