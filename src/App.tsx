@@ -15,7 +15,7 @@ import BankAccounts from "./pages/BankAccounts";
 import Transactions from "./pages/Transactions"; 
 import Assets from "./pages/Assets"; 
 import Reports from "./pages/Reports"; // <-- BARU
-
+import Profile from "./pages/Profile"; // <-- IMPORT BARU
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -92,6 +92,20 @@ const App = () => (
                 }
               />
               {/* AKHIR ROUTE REPORTS */}
+              <Route path="*" element={<NotFound />} />
+              {/* ROUTE PROFILE BARU */}
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Profile />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* AKHIR ROUTE PROFILE */}
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "react"; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/currency";
 import { AIFinancialSuggestion } from "@/components/dashboard/AIFinancialSuggestion";
@@ -18,15 +18,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+// Impor Hook dan Komponen Chart dengan ekstensi file yang benar (.ts / .tsx)
+import { useChartData } from "@/hooks/useChartData.ts";
+import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart.tsx";
+import { ComparisonBarChart } from "@/components/dashboard/ComparisonBarChart.tsx";
+import { DailyTrendLineChart } from "@/components/dashboard/DailyTrendLineChart.tsx";
 
 
 export default function Dashboard() {
   
   const [period, setPeriod] = useState<string>("this-month");
   
-  // Menggunakan hook baru untuk mendapatkan data dan loading state
-  const { stats, isLoading: loading, dateRange } = useDashboardStats(period);
+  // Hook untuk Summary Stats
+  const { stats, isLoading: loading } = useDashboardStats(period);
   
+  // Hook untuk Chart Data (Data ini umumnya dihitung berdasarkan "this-month")
+  const { chartData, isLoading: chartLoading } = useChartData();
+  
+  const isDataLoading = loading || chartLoading;
 
   const statCards = [
     {
@@ -59,7 +68,7 @@ export default function Dashboard() {
     },
   ];
 
-  if (loading) {
+  if (isDataLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -82,7 +91,7 @@ export default function Dashboard() {
             <SelectItem value="this-week">This Week</SelectItem>
             <SelectItem value="this-month">This Month</SelectItem>
             <SelectItem value="this-year">This Year</SelectItem>
-            <SelectItem value="custom-range" disabled>Custom Range</SelectItem> {/* Disabled for later implementation */}
+            <SelectItem value="custom-range" disabled>Custom Range</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -107,6 +116,49 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+      
+      {/* Chart Section */}
+      {/* Chart hanya tampil untuk periode 'this-month' atau 'this-year' (menggunakan data bulanan) */}
+      {(period === 'this-month' || period === 'this-year') && chartData ? (
+        <div className="space-y-4">
+            <h2 className="text-xl font-bold">Visualisasi Keuangan</h2>
+            <div className="grid gap-4 lg:grid-cols-2">
+                <CategoryPieChart 
+                    data={chartData.incomePieData} 
+                    type="income" 
+                    isLoading={chartLoading} 
+                />
+                <CategoryPieChart 
+                    data={chartData.expensePieData} 
+                    type="expense" 
+                    isLoading={chartLoading} 
+                />
+                <ComparisonBarChart
+                    data={chartData.comparisonData}
+                    isLoading={chartLoading}
+                />
+                {/* Daily Trend Chart mengambil penuh di desktop */}
+                <div className="lg:col-span-2">
+                    <DailyTrendLineChart
+                        data={chartData.trendData}
+                        isLoading={chartLoading}
+                    />
+                </div>
+            </div>
+        </div>
+      ) : (
+         <Card>
+            <CardHeader>
+                 <CardTitle className="text-lg">Financial Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="pt-4 text-sm text-muted-foreground">
+                    Grafik tersedia untuk periode **This Month** atau **This Year**.
+                </div>
+            </CardContent>
+          </Card>
+      )}
+
 
       {/* Welcome Card & AI Suggestion */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -129,20 +181,6 @@ export default function Dashboard() {
         <AIFinancialSuggestion />
       </div>
       
-      {/* Placeholder for Charts and Summary Table */}
-      <Card>
-        <CardHeader>
-             <CardTitle className="text-lg">Financial Overview ({period})</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className="text-muted-foreground">
-                Menampilkan data dari: {dateRange.start} hingga {dateRange.end}
-            </p>
-            <div className="pt-4 text-sm text-muted-foreground">
-                Placeholder untuk Pie Chart (Income/Expense per Category) dan Bar Chart (Comparison).
-            </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

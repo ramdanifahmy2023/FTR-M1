@@ -6,10 +6,10 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useEffect, useMemo } from "react";
 
-import { useTransactions, Transaction } from "@/hooks/useTransactions";
-import { useCategories } from "@/hooks/useCategories"; // Perlu hook ini
-import { useBankAccounts } from "@/hooks/useBankAccounts"; // Perlu hook ini
-import { parseFormattedNumber, formatNumberInput } from "@/utils/currency";
+import { useTransactions, Transaction } from "@/hooks/useTransactions.ts";
+import { useCategories } from "@/hooks/useCategories.ts";
+import { useBankAccounts } from "@/hooks/useBankAccounts.ts";
+import { parseFormattedNumber, formatNumberInput } from "@/utils/currency.ts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,8 +54,8 @@ const transactionFormSchema = z.object({
   transaction_date: z.date({
     required_error: "Tanggal transaksi harus diisi.",
   }).max(new Date(), "Tanggal transaksi tidak boleh di masa depan."),
-  // bank_account_id bisa null jika user tidak memilihnya
-  bank_account_id: z.string().optional().nullable().transform(e => e === "" ? null : e),
+  // bank_account_id bisa null di DB, tapi di form kita gunakan string "null-value"
+  bank_account_id: z.string().optional().nullable(),
   description: z.string().max(255, "Deskripsi maksimal 255 karakter.").optional().nullable(),
 });
 
@@ -75,6 +75,9 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
     return defaultValues?.transaction_date ? new Date(defaultValues.transaction_date) : new Date();
   }, [defaultValues]);
 
+  // Konversi null dari DB menjadi "null-value" untuk Select
+  const initialAccountId = defaultValues?.bank_account_id || "null-value";
+
   // 2. Inisialisasi Form
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -83,7 +86,7 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
       category_id: defaultValues?.category_id || "",
       amount: defaultValues?.amount ? formatNumberInput(String(defaultValues.amount)) : "",
       transaction_date: initialDate,
-      bank_account_id: defaultValues?.bank_account_id || "",
+      bank_account_id: initialAccountId,
       description: defaultValues?.description || "",
     },
   });
@@ -113,9 +116,9 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
   useEffect(() => {
     // Reset category_id ke default (kosong) ketika type berubah
     form.setValue("category_id", "", { shouldValidate: true });
-    // Reset bank_account_id saat type berubah, kecuali jika sedang dalam mode edit dan id-nya ada
+    // Reset bank_account_id saat type berubah
     if (!isEditing || defaultValues?.type !== transactionType) {
-        form.setValue("bank_account_id", null, { shouldValidate: true });
+        form.setValue("bank_account_id", "null-value", { shouldValidate: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactionType]);
@@ -126,12 +129,13 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
     const parsedAmount = parseFormattedNumber(values.amount);
 
     try {
-      // Pastikan bank_account_id adalah string atau null
-      const bankAccountId = values.bank_account_id === "" ? null : values.bank_account_id;
+      // Perbaikan: Konversi string "null-value" kembali ke null untuk database
+      const bankAccountId = values.bank_account_id === "null-value" ? null : values.bank_account_id;
       
       const payload: TablesInsert<"transactions"> = {
         type: values.type,
-        category_id: values.category_id,
+        // Pastikan category_id tidak null sebelum dikirim
+        category_id: values.category_id, 
         amount: parsedAmount,
         transaction_date: format(values.transaction_date, "yyyy-MM-dd"),
         bank_account_id: bankAccountId, 
@@ -222,15 +226,17 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
           render={({ field }) => (
             <FormItem>
               <FormLabel>Kategori</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              {/* field.value di sini dijamin bukan null/undefined karena Zod schema tidak mengizinkan */}
+              <Select onValueChange={field.onChange} value={field.value}> 
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih Kategori" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  {/* Perbaikan: Menggunakan string unik "no-category" sebagai placeholder non-kosong */}
                   {availableCategories.length === 0 ? (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="no-category" disabled> 
                         Belum ada kategori {transactionType}
                     </SelectItem>
                   ) : (
@@ -305,18 +311,20 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
           render={({ field }) => (
             <FormItem>
               <FormLabel>Rekening Bank (Opsional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              {/* Perbaikan: Menggunakan "null-value" untuk mewakili null dari DB/form */}
+              <Select onValueChange={field.onChange} value={field.value || "null-value"}> 
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih Rekening Bank" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="" key="no-account">
+                  {/* Perbaikan: Ganti value="" menjadi "null-value" */}
+                  <SelectItem value="null-value" key="no-account"> 
                     Tidak ada (Tunai/Lainnya)
                   </SelectItem>
                   {bankAccounts.length === 0 ? (
-                    <SelectItem value="disabled" disabled>
+                    <SelectItem value="disabled-account" disabled>
                         Belum ada rekening bank
                     </SelectItem>
                   ) : (

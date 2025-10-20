@@ -18,10 +18,20 @@ serve(async (req) => {
       throw new Error("GOOGLE_AI_API_KEY is not configured");
     }
 
+    // --- START PERBAIKAN KRITIS ---
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseKey) {
+        return new Response(
+            JSON.stringify({ error: "SUPABASE environment variables are not configured correctly in Edge Function deployment." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+    
     // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    // --- END PERBAIKAN KRITIS ---
 
     // Get user from authorization header
     const authHeader = req.headers.get("Authorization");

@@ -1,9 +1,11 @@
+// src/components/layout/FloatingActionButton.tsx
+
 import { useState } from "react";
 import { Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // <-- IMPORT BARU: DialogDescription
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { TransactionForm } from "@/components/transactions/TransactionForm.tsx";
 import { cn } from "@/lib/utils";
 
 export function FloatingActionButton() {
@@ -34,6 +36,9 @@ export function FloatingActionButton() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Quick Add Transaction</DialogTitle>
+            <DialogDescription>
+                Pilih tipe dan masukkan detail transaksi Anda. {/* <-- TAMBAHKAN INI */}
+            </DialogDescription>
           </DialogHeader>
           
           <Tabs 
