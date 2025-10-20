@@ -6,7 +6,7 @@ import { ReportTable } from "@/components/reports/ReportTable.tsx";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Filter } from "lucide-react";
 
-// Default Filters (Tetap Sama)
+// Default Filters
 const defaultFilters: ReportFilterValues = {
   dateRange: {
     from: undefined,
@@ -30,7 +30,7 @@ export default function Reports() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Laporan Keuangan</h1>
 
-      {/* Filter Section (Tetap Sama) */}
+      {/* Filter Section */}
       <Card className="shadow-medium">
         <CardHeader>
              <CardTitle className="text-lg flex items-center gap-2">
@@ -46,7 +46,7 @@ export default function Reports() {
         </CardContent>
       </Card>
 
-      {/* Report Table Section (Komponen dipanggil langsung) */}
+      {/* Report Table Section */}
       {/* Tombol ekspor sudah dipindahkan ke dalam ReportTable */}
       <ReportTable filters={filters} />
     </div>

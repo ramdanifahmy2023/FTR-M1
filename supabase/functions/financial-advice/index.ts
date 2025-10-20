@@ -35,7 +35,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
-      console.error("Auth Error:", userError);
+      console.error("Auth Error:", userError); // Tetap log error auth di server
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -103,12 +103,8 @@ serve(async (req) => {
 Berikan 3-5 tips praktis untuk meningkatkan kesehatan keuangan dalam bahasa Indonesia. Jawaban harus singkat, jelas, dan actionable. Format dalam bentuk poin-poin dengan emoji yang relevan.`;
 
     // 7. Panggil Google AI API
-    // --- PERUBAHAN DI SINI ---
-    // Ganti 'gemini-pro' menjadi 'gemini-1.5-flash-latest' atau model lain yang valid
-    const modelName = "gemini-1.5-flash-latest"; // Atau coba 'gemini-1.0-pro' jika flash tidak tersedia/diinginkan
+    const modelName = "gemini-1.0-pro"; // Coba model ini
     const googleAiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GOOGLE_AI_API_KEY}`;
-    // --- AKHIR PERUBAHAN ---
-
     const googleAiPayload = {
         contents: [ { parts: [ { text: prompt } ] } ],
         generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
@@ -121,17 +117,17 @@ Berikan 3-5 tips praktis untuk meningkatkan kesehatan keuangan dalam bahasa Indo
       }
     );
 
+    // Penanganan Error Google AI Lebih Detail
     if (!googleAiResponse.ok) {
       let errorBody = "Could not read error response body.";
       try {
           errorBody = await googleAiResponse.text();
-      } catch (_) { /* Abaikan jika body tidak bisa dibaca */ }
-      console.error("Google AI API error:", googleAiResponse.status, errorBody);
+      } catch (_) { /* Abaikan */ }
+      console.error("Google AI API error:", googleAiResponse.status, errorBody); // Log error spesifik
       throw new Error(`Google AI API failed with status ${googleAiResponse.status}: ${errorBody.substring(0, 200)}`);
     }
 
     const googleAiData = await googleAiResponse.json();
-
     const suggestion = googleAiData.candidates?.[0]?.content?.parts?.[0]?.text || "Tidak ada saran yang tersedia saat ini.";
 
     // 8. Kirim Respons Sukses
@@ -141,7 +137,7 @@ Berikan 3-5 tips praktis untuk meningkatkan kesehatan keuangan dalam bahasa Indo
     );
 
   } catch (error) {
-    console.error("Error in financial-advice function:", error); // Tetap log error server
+    console.error("Error in financial-advice function:", error); // Log error internal
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Internal Server Error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

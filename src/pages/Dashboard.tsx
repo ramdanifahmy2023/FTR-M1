@@ -55,7 +55,7 @@ export default function Dashboard() {
   const { chartData, isLoading: loadingCharts } = useChartData();
   const isDataLoading = loadingStats || loadingCharts;
 
-  // --- Realtime Subscription Effect (Tetap Sama) ---
+  // Realtime Subscription Effect (console.log dihapus)
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -63,64 +63,59 @@ export default function Dashboard() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
-        (_payload) => {
+        (_payload) => { // Payload tidak digunakan
+          // Invalidate queries untuk refresh data
           queryClient.invalidateQueries({ queryKey: ['dashboard_charts'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard_stats', period] });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
-          queryClient.invalidateQueries({ queryKey: ['bank_accounts']});
-          queryClient.invalidateQueries({ queryKey: ['assets']});
+          queryClient.invalidateQueries({ queryKey: ['bank_accounts']}); // Refresh saldo bank
+          queryClient.invalidateQueries({ queryKey: ['assets']}); // Refresh aset jika relevan
         }
       )
-      .subscribe();
+      .subscribe(); // Hapus callback status jika tidak perlu log
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [queryClient, user, period]);
-  // --- Akhir Realtime Subscription Effect ---
 
   // Fungsi untuk menutup modal Quick Add
   const closeQuickAddDialog = () => setIsQuickAddOpen(false);
 
   const statCards = [
-    // ... (statCards array tetap sama) ...
     { title: "Total Income", value: stats.totalIncome, icon: TrendingUp, gradient: "gradient-success", textColor: "text-success" },
     { title: "Total Expense", value: stats.totalExpense, icon: TrendingDown, gradient: "gradient-danger", textColor: "text-danger" },
     { title: "Bank Balance", value: stats.totalBalance, icon: Wallet, gradient: "gradient-primary", textColor: "text-primary" },
     { title: "Total Assets", value: stats.totalAssets, icon: Briefcase, gradient: "gradient-primary", textColor: "text-primary" },
   ];
 
-  // --- Skeleton Loading (Tetap Sama) ---
+  // Skeleton Loading
    if (isDataLoading && !chartData?.trendData.length && !stats.totalIncome && !stats.totalExpense) {
-      // ... (kode skeleton tetap sama) ...
-       return (
-         <div className="space-y-6">
-           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-             <Skeleton className="h-9 w-48" />
-             <Skeleton className="h-10 w-[180px]" />
-           </div>
-           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
-           </div>
-           <Skeleton className="h-96 w-full" />
-           <Skeleton className="h-64 w-full" />
-           <div className="grid gap-4 md:grid-cols-2">
-             <Skeleton className="h-48 w-full" />
-             <Skeleton className="h-48 w-full" />
-           </div>
-         </div>
-       );
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="h-10 w-[180px]" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+          </div>
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
+      );
     }
-    // --- Akhir Skeleton Loading ---
-
 
   return (
     <div className="space-y-6">
-      {/* Header with period filter (Tetap Sama) */}
+      {/* Header with period filter */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <Select value={period} onValueChange={setPeriod}>
-          {/* ... (Select component tetap sama) ... */}
            <SelectTrigger className="w-full sm:w-[180px]">
             <Calendar className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Select period" />
@@ -134,9 +129,8 @@ export default function Dashboard() {
         </Select>
       </div>
 
-      {/* Stats Grid (Tetap Sama) */}
+      {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* ... (mapping statCards tetap sama) ... */}
          {statCards.map((stat) => (
           <Card key={stat.title} className="shadow-medium hover:shadow-large transition-shadow animate-slide-up">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -156,9 +150,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Chart Section Refactored (Tetap Sama) */}
+      {/* Chart Section */}
       <div className="grid gap-4 lg:grid-cols-2">
-         {/* ... (Kode Charts tetap sama) ... */}
          <CategoryPieChart
               data={chartData.incomePieData}
               type="income"
@@ -183,10 +176,10 @@ export default function Dashboard() {
           </div>
       </div>
 
-      {/* Tabel Ringkasan Kategori (Tetap Sama) */}
+      {/* Tabel Ringkasan Kategori */}
       <CategorySummaryTable period={period} />
 
-      {/* Welcome Card & AI Suggestion (Tombol diperbaiki) */}
+      {/* Welcome Card & AI Suggestion */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="shadow-medium">
           <CardContent className="pt-6">
@@ -197,15 +190,14 @@ export default function Dashboard() {
                 dan memantau aset Anda.
               </p>
               <div className="flex gap-3 justify-center flex-wrap">
-                 {/* --- PERBAIKAN TOMBOL --- */}
-                 {/* 1. Tombol Tambah Transaksi (membuka modal) */}
+                 {/* Tombol Tambah Transaksi (membuka modal) */}
                  <Dialog open={isQuickAddOpen} onOpenChange={setIsQuickAddOpen}>
                     <DialogTrigger asChild>
                         <Button className="gradient-primary">
                             <Plus className="mr-2 h-4 w-4"/> Tambah Transaksi
                         </Button>
                     </DialogTrigger>
-                    {/* Konten Modal Quick Add (sama seperti di FAB) */}
+                    {/* Konten Modal Quick Add */}
                     <DialogContent className="sm:max-w-[450px]">
                       <DialogHeader>
                         <DialogTitle>Tambah Transaksi Cepat</DialogTitle>
@@ -232,19 +224,17 @@ export default function Dashboard() {
                     </DialogContent>
                  </Dialog>
 
-                 {/* 2. Tombol Lihat Laporan (navigasi) */}
+                 {/* Tombol Lihat Laporan (navigasi) */}
                  <Button variant="outline" onClick={() => navigate('/reports')}>
                     Lihat Laporan
                  </Button>
-                 {/* --- AKHIR PERBAIKAN TOMBOL --- */}
               </div>
             </div>
           </CardContent>
         </Card>
-        {/* AI Suggestion (Sudah berfungsi sebelumnya) */}
+        {/* AI Suggestion */}
         <AIFinancialSuggestion />
       </div>
-
     </div>
   );
 }

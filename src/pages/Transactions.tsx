@@ -31,22 +31,10 @@ export default function Transactions() {
 
   const handleApplyFilters = (newFilters: ReportFilterValues) => {
     setFilters(newFilters);
-     // Reset ke halaman pertama saat filter berubah
+     // Reset ke halaman pertama saat filter berubah (ditangani di TransactionList)
   };
 
-   // Handler untuk tombol ekspor di header (opsional, bisa dipindah ke TransactionList)
-   const handleExportPDF = () => {
-    // TODO: Implement PDF export logic using data based on current filters
-    console.log("Export PDF clicked with filters:", filters);
-    // Panggil fungsi exportToPDF dari exportUtils jika diperlukan di sini
-    // Mungkin perlu mengambil data transactions lagi dengan filter saat ini
-   };
-
-   const handleExportCSV = () => {
-       // TODO: Implement CSV export logic using data based on current filters
-       console.log("Export CSV clicked with filters:", filters);
-       // Panggil fungsi exportToCSV dari exportUtils jika diperlukan di sini
-   };
+  // Handler ekspor dipindahkan ke TransactionList/ReportTable
 
   return (
     <div className="space-y-6">
@@ -82,6 +70,8 @@ export default function Transactions() {
       <Card>
         <CardHeader>
              <CardTitle className="text-lg">Filter & Pencarian</CardTitle>
+             {/* Optional: Tambah CardDescription jika perlu */}
+             {/* <CardDescription>Gunakan filter di bawah untuk mencari transaksi spesifik.</CardDescription> */}
         </CardHeader>
         <CardContent>
           {/* Gunakan komponen filter */}
@@ -90,15 +80,12 @@ export default function Transactions() {
       </Card>
 
       {/* Card Daftar Transaksi */}
+      {/* Card ini membungkus TransactionList */}
       <Card>
-         <CardHeader className="flex flex-row items-center justify-between">
-            {/* Judul bisa disesuaikan atau dihapus jika TransactionList sudah punya header */}
-            <CardTitle>Daftar Transaksi</CardTitle>
-             <div className="flex space-x-2">
-                {/* Tombol Ekspor bisa diletakkan di sini atau di dalam TransactionList */}
-                 <Button variant="outline" onClick={handleExportPDF}><FileText className="h-4 w-4 mr-2" /> Ekspor PDF</Button>
-                 <Button variant="outline" onClick={handleExportCSV}><FileText className="h-4 w-4 mr-2" /> Ekspor CSV</Button>
-            </div>
+         <CardHeader>
+             {/* Judul bisa disederhanakan karena sudah ada H1 di atas */}
+             <CardTitle>Daftar Transaksi</CardTitle>
+             {/* Tombol ekspor dipindahkan ke dalam TransactionList/ReportTable */}
          </CardHeader>
          <CardContent>
             {/* Gunakan komponen list transaksi */}
