@@ -148,18 +148,18 @@ export function useTransactions(filters: TransactionFilters = {}) {
      * MUTATION: Menghapus transaksi
      */
     const deleteTransactionMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const { error } = await supabase.from("transactions").delete().eq("id", id);
-            if (error) throw new Error(error.message);
-        },
-        onSuccess: () => {
-            invalidateAll();
-            toast.success("Transaksi berhasil dihapus! 💣");
-        },
-        onError: (error) => {
-            toast.error(`Gagal menghapus transaksi: ${error.message}`);
-        },
-    });
+     mutationFn: async (id: string) => {
+         const { error } = await supabase.from("transactions").delete().eq("id", id);
+         if (error) throw new Error(error.message); // Error dilempar ke onError
+     },
+     onSuccess: () => { // Hanya jalan jika mutationFn berhasil
+         invalidateAll();
+         toast.success("Transaksi berhasil dihapus! 💣"); // <-- FEEDBACK SUKSES
+     },
+     onError: (error) => { // Jalan jika mutationFn melempar error
+         toast.error(`Gagal menghapus transaksi: ${error.message}`); // <-- FEEDBACK ERROR
+     },
+ });
 
     return {
         transactions: transactions || [],

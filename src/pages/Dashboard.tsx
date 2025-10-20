@@ -38,7 +38,7 @@ export default function Dashboard() {
   const { chartData, isLoading: loadingCharts } = useChartData();
   const isDataLoading = loadingStats || loadingCharts;
 
-  // --- Realtime Subscription Effect (Tetap Sama) ---
+  // --- Realtime Subscription Effect (console.log dihapus) ---
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -46,17 +46,24 @@ export default function Dashboard() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          console.log('Perubahan terdeteksi pada transaksi:', payload);
+        (_payload) => { // Payload tidak digunakan, jadi bisa diganti _payload
+          // console.log('Perubahan terdeteksi pada transaksi:', payload); // <-- DIHAPUS
+          // Invalidate queries untuk refresh data
           queryClient.invalidateQueries({ queryKey: ['dashboard_charts'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard_stats', period] });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['bank_accounts']}); // Mungkin perlu refresh saldo bank
+          queryClient.invalidateQueries({ queryKey: ['assets']}); // Mungkin perlu refresh aset (jika relevan)
         }
       )
-      .subscribe();
-    console.log("Subscribing to transactions changes...");
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // console.log("Subscribing to transactions changes..."); // <-- DIHAPUS
+        }
+      });
+
     return () => {
-      console.log("Unsubscribing from transactions changes...");
+      // console.log("Unsubscribing from transactions changes..."); // <-- DIHAPUS
       supabase.removeChannel(channel);
     };
   }, [queryClient, user, period]);
@@ -69,32 +76,32 @@ export default function Dashboard() {
     { title: "Total Assets", value: stats.totalAssets, icon: Briefcase, gradient: "gradient-primary", textColor: "text-primary" },
   ];
 
-  // --- Skeleton Loading untuk seluruh halaman jika data awal belum ada ---
-  if (isDataLoading && !chartData?.trendData.length && !stats.totalIncome && !stats.totalExpense) {
-     return (
-       <div className="space-y-6">
-         {/* Skeleton Header */}
-         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-           <Skeleton className="h-9 w-48" />
-           <Skeleton className="h-10 w-[180px]" />
-         </div>
-         {/* Skeleton Stats Grid */}
-         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
-         </div>
-         {/* Skeleton Chart Section */}
-         <Skeleton className="h-96 w-full" />
-         {/* Skeleton Table */}
-         <Skeleton className="h-64 w-full" />
-         {/* Skeleton Welcome & AI */}
-         <div className="grid gap-4 md:grid-cols-2">
-           <Skeleton className="h-48 w-full" />
-           <Skeleton className="h-48 w-full" />
-         </div>
-       </div>
-     );
-   }
-   // --- Akhir Skeleton Loading ---
+  // --- Skeleton Loading (Tetap Sama) ---
+   if (isDataLoading && !chartData?.trendData.length && !stats.totalIncome && !stats.totalExpense) {
+      return (
+        <div className="space-y-6">
+          {/* Skeleton Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="h-10 w-[180px]" />
+          </div>
+          {/* Skeleton Stats Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+          </div>
+          {/* Skeleton Chart Section */}
+          <Skeleton className="h-96 w-full" />
+          {/* Skeleton Table */}
+          <Skeleton className="h-64 w-full" />
+          {/* Skeleton Welcome & AI */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
+      );
+    }
+    // --- Akhir Skeleton Loading ---
 
 
   return (
@@ -103,7 +110,7 @@ export default function Dashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-full sm:w-[180px]"> {/* <-- Tambah w-full untuk mobile */}
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Calendar className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
@@ -116,7 +123,7 @@ export default function Dashboard() {
         </Select>
       </div>
 
-      {/* Stats Grid (Tetap Sama, sudah menggunakan Card) */}
+      {/* Stats Grid (Tetap Sama) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
           <Card key={stat.title} className="shadow-medium hover:shadow-large transition-shadow animate-slide-up">
@@ -137,41 +144,36 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* --- Chart Section Refactored --- */}
-      {/* Selalu render grid, biarkan komponen chart menangani loading/placeholder internal */}
+      {/* Chart Section Refactored (Tetap Sama) */}
       <div className="grid gap-4 lg:grid-cols-2">
           {/* Pie Charts */}
           <CategoryPieChart
               data={chartData.incomePieData}
               type="income"
-              isLoading={loadingCharts && !chartData.incomePieData?.length} // Loading jika belum ada data
+              isLoading={loadingCharts && !chartData.incomePieData?.length}
           />
           <CategoryPieChart
               data={chartData.expensePieData}
               type="expense"
               isLoading={loadingCharts && !chartData.expensePieData?.length}
           />
-
-          {/* Bar Chart - ambil lebar penuh jika pie chart tidak ada */}
+          {/* Bar Chart */}
           <div className={(chartData.incomePieData?.length || chartData.expensePieData?.length) ? "lg:col-span-1" : "lg:col-span-2"}>
             <ComparisonBarChart
                 data={chartData.comparisonData}
                 isLoading={loadingCharts && !chartData.comparisonData?.length}
             />
           </div>
-
-          {/* Line Chart - selalu ambil lebar penuh */}
+          {/* Line Chart */}
           <div className="lg:col-span-2">
               <DailyTrendLineChart
                   data={chartData.trendData}
-                  isLoading={loadingCharts && !chartData.trendData?.length} // Loading jika belum ada data
+                  isLoading={loadingCharts && !chartData.trendData?.length}
               />
           </div>
       </div>
-      {/* --- Akhir Chart Section --- */}
 
-
-      {/* Tabel Ringkasan Kategori (Sudah menggunakan Card di dalamnya) */}
+      {/* Tabel Ringkasan Kategori (Tetap Sama) */}
       <CategorySummaryTable period={period} />
 
       {/* Welcome Card & AI Suggestion (Tetap Sama) */}
@@ -186,6 +188,7 @@ export default function Dashboard() {
               </p>
               <div className="flex gap-3 justify-center flex-wrap">
                  {/* Anda bisa menambahkan Link atau onClick handler di sini */}
+                 {/* Contoh: <Button className="gradient-primary" onClick={bukaModalTambah}>Tambah Transaksi</Button> */}
                  <Button className="gradient-primary" >Tambah Transaksi</Button>
                  <Button variant="outline" >Lihat Laporan</Button>
               </div>

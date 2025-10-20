@@ -5,7 +5,18 @@ import { useTransactions, Transaction } from "@/hooks/useTransactions";
 import { formatCurrency } from "@/utils/currency";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { FileText, Download, ListChecks, ArrowUpDown, ArrowUp, ArrowDown, Wallet, Tag, CalendarDays, FileWarning } from "lucide-react"; // <-- Tambahkan FileWarning
+import {
+    FileText,
+    Download,
+    ListChecks,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    Wallet,
+    Tag, // <-- Tag tidak digunakan langsung di sini, bisa dihapus jika tidak perlu
+    CalendarDays,
+    FileWarning
+} from "lucide-react"; // <-- Tambahkan FileWarning
 import { exportToPDF, exportToCSV } from "@/lib/exportUtils";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
@@ -23,6 +34,7 @@ interface ReportTableProps {
   filters: ReportFilterValues;
 }
 
+// Tipe kunci yang bisa disortir (termasuk relasi)
 type SortableReportKeys = keyof Pick<Transaction, 'transaction_date' | 'type' | 'amount' | 'description'> | 'categories.name' | 'bank_accounts.account_name';
 type SortDirection = 'ascending' | 'descending';
 interface SortConfig {
@@ -65,12 +77,12 @@ const MobileTransactionCard = ({ transaction }: { transaction: Transaction }) =>
                         )}
                          <span className="flex items-center gap-1">
                             <CalendarDays className="h-3 w-3 flex-shrink-0" />
+                            {/* Pastikan parse tanggal sebagai local time */}
                              {format(new Date(transaction.transaction_date + 'T00:00:00'), 'dd MMM yy', { locale: id })}
                          </span>
                     </div>
                 </div>
-                {/* Aksi (jika diperlukan di sini, atau biarkan di TransactionList) */}
-                {/* <DropdownMenu> ... </DropdownMenu> */}
+                {/* Aksi tidak ditambahkan di sini untuk ReportTable */}
             </CardContent>
         </Card>
     );
@@ -82,8 +94,8 @@ export function ReportTable({ filters }: ReportTableProps) {
     const isMobile = useIsMobile();
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'transaction_date', direction: 'descending' });
 
+    // Memoize filter object for useTransactions hook
     const transactionFilters = useMemo(() => ({
-      // ... (filter tetap sama) ...
         startDate: filters.dateRange?.from ? format(filters.dateRange.from, 'yyyy-MM-dd') : undefined,
         endDate: filters.dateRange?.to ? format(filters.dateRange.to, 'yyyy-MM-dd') : undefined,
         type: filters.type === 'all' ? undefined : filters.type,
@@ -92,77 +104,80 @@ export function ReportTable({ filters }: ReportTableProps) {
         searchQuery: filters.searchQuery || undefined,
     }), [filters]);
 
-    // !! PENTING: Ambil isLoading, transactions, DAN data mentah (jika ada error handling)
+    // Fetch transactions based on filters
     const { transactions, isLoading, error } = useTransactions(transactionFilters);
 
-    // Sorting (tetap sama)
+    // Memoize sorted transactions
     const sortedTransactions = useMemo(() => {
-        // ... (logika sorting tetap sama) ...
-        let sortableItems = [...(transactions || [])]; // Handle jika transactions undefined/null saat loading/error
+        let sortableItems = [...(transactions || [])]; // Handle potential null/undefined
         if (sortConfig.key !== null) {
-             sortableItems.sort((a, b) => {
-                 let aValue: any;
-                 let bValue: any;
-                 if (sortConfig.key === 'categories.name') {
-                     aValue = a.categories?.name?.toLowerCase() || '';
-                     bValue = b.categories?.name?.toLowerCase() || '';
-                 } else if (sortConfig.key === 'bank_accounts.account_name') {
-                     aValue = a.bank_accounts?.account_name?.toLowerCase() || '';
-                     bValue = b.bank_accounts?.account_name?.toLowerCase() || '';
-                 } else if (sortConfig.key in a && sortConfig.key in b) {
-                      if (sortConfig.key === 'transaction_date') {
-                         // Pastikan parsing tanggal benar
-                         aValue = new Date(a.transaction_date + 'T00:00:00').getTime();
-                         bValue = new Date(b.transaction_date + 'T00:00:00').getTime();
-                      } else if (sortConfig.key === 'amount') {
-                          aValue = a.amount;
-                          bValue = b.amount;
-                      } else {
-                          aValue = String(a[sortConfig.key as keyof Transaction] || '').toLowerCase();
-                          bValue = String(b[sortConfig.key as keyof Transaction] || '').toLowerCase();
-                      }
-                 } else {
-                     aValue = '';
-                     bValue = '';
-                 }
-                 if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-                 if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-                 return 0;
-             });
+            sortableItems.sort((a, b) => {
+                let aValue: any;
+                let bValue: any;
+                // Handle sorting by related table fields
+                if (sortConfig.key === 'categories.name') {
+                    aValue = a.categories?.name?.toLowerCase() || '';
+                    bValue = b.categories?.name?.toLowerCase() || '';
+                } else if (sortConfig.key === 'bank_accounts.account_name') {
+                    aValue = a.bank_accounts?.account_name?.toLowerCase() || '';
+                    bValue = b.bank_accounts?.account_name?.toLowerCase() || '';
+                } else if (sortConfig.key in a && sortConfig.key in b) {
+                     // Handle sorting by direct transaction fields
+                     if (sortConfig.key === 'transaction_date') {
+                        // Ensure correct date comparison (parse as local)
+                        aValue = new Date(a.transaction_date + 'T00:00:00').getTime();
+                        bValue = new Date(b.transaction_date + 'T00:00:00').getTime();
+                     } else if (sortConfig.key === 'amount') {
+                         aValue = a.amount;
+                         bValue = b.amount;
+                     } else {
+                         aValue = String(a[sortConfig.key as keyof Transaction] || '').toLowerCase();
+                         bValue = String(b[sortConfig.key as keyof Transaction] || '').toLowerCase();
+                     }
+                } else {
+                    aValue = ''; // Fallback for safety
+                    bValue = '';
+                }
+
+                // Comparison logic
+                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+                return 0;
+            });
         }
         return sortableItems;
     }, [transactions, sortConfig]);
 
-    // Total Summary (handle jika transactions null/undefined)
+    // Calculate total summary (memoized)
     const totalSummary = useMemo(() => {
-        const itemsToSum = transactions || []; // Gunakan array kosong jika belum ada data
+        const itemsToSum = transactions || [];
         const totalIncome = itemsToSum.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const totalExpense = itemsToSum.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
         return { totalIncome, totalExpense, netFlow: totalIncome - totalExpense };
     }, [transactions]);
 
-    // --- Handler Ekspor ---
+    // Export Handlers
     const handleExportPDF = () => {
         if (transactions && transactions.length > 0) {
-            exportToPDF(transactions, filters, totalSummary); // Pass data yang relevan
+            exportToPDF(transactions, filters, totalSummary);
         } else {
-            // Tampilkan pesan jika tidak ada data
-            // Anda bisa menggunakan toast di sini
-            console.warn("Tidak ada data transaksi untuk diekspor ke PDF.");
+            console.warn("No transaction data to export to PDF.");
+            // Consider adding a toast notification here:
+            // toast.info("Tidak ada data transaksi untuk diekspor ke PDF.");
         }
     };
     const handleExportCSV = () => {
         if (transactions && transactions.length > 0) {
-            exportToCSV(transactions); // Pass data yang relevan
+            exportToCSV(transactions);
         } else {
-             // Tampilkan pesan jika tidak ada data
-            console.warn("Tidak ada data transaksi untuk diekspor ke CSV.");
+            console.warn("No transaction data to export to CSV.");
+            // Consider adding a toast notification here:
+            // toast.info("Tidak ada data transaksi untuk diekspor ke CSV.");
         }
     };
-    // --- Akhir Handler Ekspor ---
 
+    // Sort Request Handler
     const requestSort = (key: SortableReportKeys) => {
-        // ... (logika requestSort tetap sama) ...
         let direction: SortDirection = 'ascending';
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
             direction = 'descending';
@@ -170,26 +185,30 @@ export function ReportTable({ filters }: ReportTableProps) {
         setSortConfig({ key, direction });
     };
 
+    // Get Sort Icon Helper
     const getSortIcon = (columnKey: SortableReportKeys) => {
-        // ... (logika getSortIcon tetap sama) ...
         if (sortConfig.key !== columnKey) return <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground/50" />;
         if (sortConfig.direction === 'ascending') return <ArrowUp className="ml-1 h-3 w-3" />;
         return <ArrowDown className="ml-1 h-3 w-3" />;
     };
 
-     // Loading State (tetap sama)
+    // --- Loading State ---
      if (isLoading) {
-         // ... (Skeleton loading tetap sama) ...
-        const skeletonCount = isMobile ? 5 : 5;
+        const skeletonCount = isMobile ? 5 : 5; // Adjust count as needed
         return (
-             <Card className="shadow-medium">
+             <Card className="shadow-medium mt-6"> {/* Add margin top */}
                 <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between">
                      <div className="space-y-1"> <Skeleton className="h-6 w-48" /> <Skeleton className="h-4 w-32" /> </div>
                      <div className="flex space-x-2 mt-4 md:mt-0"> <Skeleton className="h-9 w-24" /> <Skeleton className="h-9 w-24" /> </div>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {[...Array(skeletonCount)].map((_, i) => ( isMobile ? <Skeleton key={i} className="h-28 w-full rounded-lg" /> : <Skeleton key={i} className="h-12 w-full" /> ))}
+                        {[...Array(skeletonCount)].map((_, i) => (
+                             isMobile
+                                ? <Skeleton key={i} className="h-28 w-full rounded-lg" />
+                                : <Skeleton key={i} className="h-12 w-full" />
+                         ))}
+                         {/* Skeleton for footer in desktop */}
                          {!isMobile && <Skeleton className="h-12 w-full mt-4" />}
                     </div>
                 </CardContent>
@@ -197,59 +216,63 @@ export function ReportTable({ filters }: ReportTableProps) {
         );
     }
 
-    // --- Error Handling Sederhana ---
+    // --- Error State ---
     if (error) {
         return (
-            <Card className="shadow-medium border-destructive">
+            <Card className="shadow-medium border-destructive mt-6">
                 <CardHeader>
-                    <CardTitle className="text-destructive">Gagal Memuat Data</CardTitle>
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                        <FileWarning className="h-5 w-5"/> Gagal Memuat Data
+                    </CardTitle>
                     <CardDescription>Terjadi kesalahan saat mengambil data transaksi.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-destructive-foreground bg-destructive p-3 rounded">{error.message}</p>
-                    {/* Anda bisa menambahkan tombol refresh di sini */}
+                    {/* Optional: Add a refresh button */}
+                    {/* <Button variant="destructive" className="mt-4" onClick={() => queryClient.refetchQueries(queryKey)}>Coba Lagi</Button> */}
                 </CardContent>
             </Card>
         );
     }
-    // --- Akhir Error Handling ---
+    // --- End Error State ---
 
 
-    const displayTransactions = sortedTransactions;
+    const displayTransactions = sortedTransactions; // Use sorted data for display
 
     return (
-        <Card className="shadow-medium">
+        <Card className="shadow-medium animate-fade-in mt-6"> {/* Add margin top and animation */}
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between">
                 <div>
                      <CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5 text-primary"/> Rincian Transaksi</CardTitle>
-                    {/* Tampilkan jumlah transaksi jika ada, atau pesan jika tidak */}
-                    <CardDescription>
+                     <CardDescription>
                        {displayTransactions.length > 0
-                          ? `Total ${displayTransactions.length} transaksi ditemukan.`
-                          : "Tidak ada transaksi ditemukan untuk filter ini."}
+                          ? `Total ${displayTransactions.length} transaksi ditemukan sesuai filter.`
+                          : "Tidak ada transaksi ditemukan untuk kriteria filter ini."}
                     </CardDescription>
                 </div>
-                {/* --- Tombol Ekspor di sini --- */}
                 <div className="flex space-x-2 mt-4 md:mt-0">
                     <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={!transactions || transactions.length === 0}> <Download className="mr-1.5 h-4 w-4" /> PDF </Button>
                     <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!transactions || transactions.length === 0}> <Download className="mr-1.5 h-4 w-4" /> CSV </Button>
                 </div>
-                 {/* --- Akhir Tombol Ekspor --- */}
             </CardHeader>
             <CardContent>
                  {isMobile ? (
-                    // ... (Tampilan Mobile Card tetap sama) ...
                      <div className="space-y-3">
+                         {/* --- Refined Mobile Empty State --- */}
                          {displayTransactions.length === 0 ? (
-                             <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-10">
-                                 <FileWarning className="h-8 w-8 mb-2" />
-                                 <p>Tidak ada transaksi ditemukan.</p>
+                             <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-16">
+                                 <div className="bg-primary/10 p-3 rounded-full text-primary mb-3">
+                                    <FileWarning className="h-10 w-10" />
+                                 </div>
+                                 <p className="text-lg font-medium">Data Tidak Ditemukan</p>
+                                 <p className="text-sm">Coba ubah kriteria filter Anda.</p>
                              </div>
                           ) : (
                              displayTransactions.map((t) => (
                                 <MobileTransactionCard key={t.id} transaction={t} />
                              ))
                           )}
+                         {/* Footer Total Mobile (only if data exists) */}
                          {transactions && transactions.length > 0 && (
                              <Card className="mt-4 bg-muted/50">
                                  <CardContent className="p-4 space-y-2 text-sm">
@@ -270,14 +293,14 @@ export function ReportTable({ filters }: ReportTableProps) {
                                  </CardContent>
                              </Card>
                          )}
+                         {/* --- End Refined Mobile Empty State --- */}
                      </div>
                  ) : (
-                    // ... (Tampilan Desktop Table tetap sama, pastikan footer hanya muncul jika ada data) ...
+                     // Tampilan Desktop (Table)
                      <div className="relative w-full overflow-auto max-h-[500px] rounded-md border">
                          <Table>
                              <TableHeader className="sticky top-0 bg-background z-10">
                                 <TableRow>
-                                    {/* Make sure headers use requestSort */}
                                     <TableHead className="w-[100px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('transaction_date')}> <div className="flex items-center"> Tanggal {getSortIcon('transaction_date')} </div> </TableHead>
                                     <TableHead className="w-[100px]">Tipe</TableHead>
                                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('categories.name')}> <div className="flex items-center"> Kategori {getSortIcon('categories.name')} </div> </TableHead>
@@ -285,14 +308,18 @@ export function ReportTable({ filters }: ReportTableProps) {
                                     <TableHead className="hidden md:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('bank_accounts.account_name')}> <div className="flex items-center"> Rekening {getSortIcon('bank_accounts.account_name')} </div> </TableHead>
                                     <TableHead className="text-right w-[150px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('amount')}> <div className="flex items-center justify-end"> Jumlah {getSortIcon('amount')} </div> </TableHead>
                                 </TableRow>
-                            </TableHeader>
+                             </TableHeader>
                              <TableBody>
+                                 {/* --- Refined Desktop Empty State --- */}
                                  {displayTransactions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                            <div className="flex flex-col items-center justify-center gap-2">
-                                                <FileWarning className="h-8 w-8" />
-                                                <span>Tidak ada transaksi ditemukan.</span>
+                                        <TableCell colSpan={6} className="h-64 text-center text-muted-foreground">
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <div className="bg-primary/10 p-3 rounded-full text-primary mb-3">
+                                                    <FileWarning className="h-10 w-10" />
+                                                </div>
+                                                <span className="text-lg font-medium">Data Tidak Ditemukan</span>
+                                                <span className="text-sm">Silakan sesuaikan filter Anda.</span>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -312,8 +339,9 @@ export function ReportTable({ filters }: ReportTableProps) {
                                          </TableRow>
                                      ))
                                   )}
+                                  {/* --- End Refined Desktop Empty State --- */}
                              </TableBody>
-                              {/* --- Footer hanya jika ada transaksi --- */}
+                              {/* Footer (only if data exists) */}
                               {transactions && transactions.length > 0 && (
                                    <TableFooter className="sticky bottom-0 bg-muted/80 z-10 font-bold">
                                        <TableRow>
@@ -330,7 +358,6 @@ export function ReportTable({ filters }: ReportTableProps) {
                                        </TableRow>
                                    </TableFooter>
                                )}
-                               {/* --- Akhir Footer --- */}
                          </Table>
                      </div>
                  )}

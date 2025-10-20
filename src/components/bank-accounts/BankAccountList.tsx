@@ -1,3 +1,5 @@
+// src/components/bank-accounts/BankAccountList.tsx
+
 import { useState } from "react";
 import { Plus, Landmark, Pencil, Trash2, MoreHorizontal, ArrowRight, Wallet } from "lucide-react";
 
@@ -11,24 +13,23 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { formatCurrency } from "@/utils/currency";
 import { BankAccountForm } from "./BankAccountForm";
-import { cn } from "@/lib/utils"; // <-- Import cn
+import { cn } from "@/lib/utils";
 
-// Komponen untuk menampilkan satu item rekening bank (DIREFAKTOR)
+// Komponen BankAccountItem tetap sama
 const BankAccountItem = ({ account, onDelete, onEdit }: { account: BankAccount, onDelete: (id: string) => void, onEdit: (account: BankAccount) => void }) => {
   return (
-    <Card className="shadow-medium hover:shadow-large transition-shadow animate-slide-up flex flex-col h-full"> {/* <-- Tambah flex flex-col h-full */}
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4 px-4"> {/* <-- items-start, sesuaikan padding */}
-        <div className="space-y-1"> {/* <-- Bungkus judul dan deskripsi */}
+    <Card className="shadow-medium hover:shadow-large transition-shadow animate-slide-up flex flex-col h-full">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4 px-4">
+        <div className="space-y-1">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
                  <Landmark className="h-4 w-4 text-primary flex-shrink-0" />
-                 <span className="truncate">{account.bank_name}</span> {/* <-- Truncate nama bank */}
+                 <span className="truncate">{account.bank_name}</span>
             </CardTitle>
-            <CardDescription className="truncate">{account.account_name}</CardDescription> {/* <-- Truncate nama akun */}
+            <CardDescription className="truncate">{account.account_name}</CardDescription>
         </div>
-        {/* Action Dropdown (Tetap Sama) */}
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 -mt-1"> {/* <-- Sesuaikan margin */}
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 -mt-1">
                     <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
@@ -58,13 +59,13 @@ const BankAccountItem = ({ account, onDelete, onEdit }: { account: BankAccount, 
             </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
-      <CardContent className="px-4 pb-4 flex-1 flex flex-col justify-end"> {/* <-- Tambah flex-1 flex flex-col justify-end */}
-          <div className="space-y-1 mt-2"> {/* <-- Beri jarak atas */}
+      <CardContent className="px-4 pb-4 flex-1 flex flex-col justify-end">
+          <div className="space-y-1 mt-2">
               <p className="text-2xl font-bold text-primary tabular-nums">
                   {formatCurrency(account.balance)}
               </p>
               {account.account_number && (
-                  <Badge variant="outline" className="font-mono text-xs"> {/* <-- Style nomor rekening */}
+                  <Badge variant="outline" className="font-mono text-xs">
                     {account.account_number}
                   </Badge>
               )}
@@ -74,7 +75,7 @@ const BankAccountItem = ({ account, onDelete, onEdit }: { account: BankAccount, 
   );
 };
 
-// Komponen utama daftar rekening (Perubahan minor)
+// Komponen utama daftar rekening
 export function BankAccountList() {
   const { accounts, totalBalance, isLoading, deleteAccount } = useBankAccounts();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -98,10 +99,10 @@ export function BankAccountList() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-24 w-full md:w-1/3 lg:w-1/4" /> {/* <-- Lebar berbeda */}
-        <Skeleton className="h-10 w-40 mb-4" /> {/* Skeleton tombol tambah */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> {/* <-- Tambah xl:grid-cols-4 */}
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36 w-full" />)} {/* <-- Sesuaikan tinggi */}
+        <Skeleton className="h-24 w-full md:w-1/3 lg:w-1/4" />
+        <Skeleton className="h-10 w-40 mb-4" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36 w-full" />)}
         </div>
       </div>
     );
@@ -110,7 +111,7 @@ export function BankAccountList() {
   return (
     <div className="space-y-6">
         {/* Total Balance Summary Card (Tetap Sama) */}
-        <Card className="bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-large animate-scale-in w-full md:w-1/3 lg:w-1/4"> {/* <-- Gunakan gradient & atur lebar */}
+        <Card className="bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-large animate-scale-in w-full md:w-1/3 lg:w-1/4">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">
                     Total Saldo
@@ -121,13 +122,13 @@ export function BankAccountList() {
                 <div className="text-3xl font-bold">
                     {formatCurrency(totalBalance)}
                 </div>
-                <p className="text-xs opacity-80 mt-1">{accounts.length} rekening aktif.</p> {/* <-- Opacity lebih rendah */}
+                <p className="text-xs opacity-80 mt-1">{accounts.length} rekening aktif.</p>
             </CardContent>
         </Card>
 
 
       {/* Header dan Tombol Tambah (Tetap Sama) */}
-      <div className="flex items-center justify-between mt-6"> {/* <-- Tambah margin atas */}
+      <div className="flex items-center justify-between mt-6">
         <h2 className="text-xl font-semibold">Daftar Rekening</h2>
         <Sheet open={isSheetOpen} onOpenChange={(open) => {
           setIsSheetOpen(open);
@@ -159,7 +160,7 @@ export function BankAccountList() {
 
       {/* Daftar Rekening */}
       {accounts.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> {/* <-- Tambah xl:grid-cols-4 */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {accounts.map((account) => (
             <BankAccountItem
               key={account.id}
@@ -170,16 +171,21 @@ export function BankAccountList() {
           ))}
         </div>
       ) : (
-        // Placeholder (Gunakan Card)
-        <Card className="shadow-none border-dashed col-span-full"> {/* <-- Tambah col-span-full */}
-           <CardContent className="pt-6 text-center space-y-2 flex flex-col items-center justify-center min-h-[150px]"> {/* <-- Tambah min-h */}
-            <Landmark className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="text-muted-foreground">Belum ada rekening bank yang terdaftar.</p>
-            <Button variant="link" onClick={handleNew} className="text-primary">
-              Tambah Rekening Sekarang <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+        // --- PENYEMPURNAAN EMPTY STATE ---
+        <Card className="shadow-none border-dashed col-span-full mt-6 animate-fade-in">
+           <CardContent className="pt-10 pb-10 flex flex-col items-center justify-center text-center space-y-3 min-h-[200px]">
+                <div className="bg-primary/10 p-3 rounded-full text-primary">
+                    <Landmark className="h-10 w-10" />
+                </div>
+                <p className="text-lg font-medium text-muted-foreground">
+                    Anda belum menambahkan rekening bank.
+                </p>
+                <Button variant="default" onClick={handleNew} className="gradient-primary">
+                    <Plus className="mr-2 h-4 w-4" /> Tambah Rekening Pertama Anda
+                </Button>
           </CardContent>
         </Card>
+        // --- AKHIR PENYEMPURNAAN ---
       )}
     </div>
   );
