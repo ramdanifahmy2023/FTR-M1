@@ -1,40 +1,31 @@
 // src/pages/Transactions.tsx
 
 import { useState } from "react";
-import { Plus, FileText } from "lucide-react"; // Import ikon yang dibutuhkan
+import { Plus, Filter as FilterIcon } from "lucide-react"; // Ganti nama Filter -> FilterIcon
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Import Sheet
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-// Ganti nama ReportFilters ke TransactionFilters jika Anda membuat file terpisah
-// Jika menggunakan file yang sama, biarkan ReportFilters
+// Gunakan nama ReportFilters karena komponennya sama
 import { ReportFilters, ReportFilterValues } from "@/components/reports/ReportFilters";
-import { TransactionList } from "@/components/transactions/TransactionList"; // <-- IMPORT BARU
-import { TransactionForm } from "@/components/transactions/TransactionForm"; // Import form
+import { TransactionList } from "@/components/transactions/TransactionList";
+import { TransactionForm } from "@/components/transactions/TransactionForm";
 
 // Filter default awal
 const defaultFilters: ReportFilterValues = {
-  dateRange: {
-    from: undefined,
-    to: new Date(),
-  },
-  type: "all",
-  categoryId: "all",
-  bankAccountId: "all",
-  searchQuery: "",
+  dateRange: { from: undefined, to: new Date() },
+  type: "all", categoryId: "all", bankAccountId: "all", searchQuery: "",
 };
 
 
 export default function Transactions() {
   const [filters, setFilters] = useState<ReportFilterValues>(defaultFilters);
-  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false); // State untuk sheet tambah
+  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
 
   const handleApplyFilters = (newFilters: ReportFilterValues) => {
     setFilters(newFilters);
-     // Reset ke halaman pertama saat filter berubah (ditangani di TransactionList)
+    // Reset halaman di TransactionList akan menangani ini
   };
-
-  // Handler ekspor dipindahkan ke TransactionList/ReportTable
 
   return (
     <div className="space-y-6">
@@ -56,42 +47,30 @@ export default function Transactions() {
                   </SheetDescription>
                 </SheetHeader>
                 <div className="py-4">
-                  <TransactionForm
-                    onClose={() => setIsAddSheetOpen(false)}
-                    // Anda bisa set defaultType jika mau, misal 'expense'
-                  />
+                  <TransactionForm onClose={() => setIsAddSheetOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>
         </div>
 
-
-      {/* Card Filter */}
-      <Card>
-        <CardHeader>
-             <CardTitle className="text-lg">Filter & Pencarian</CardTitle>
-             {/* Optional: Tambah CardDescription jika perlu */}
-             {/* <CardDescription>Gunakan filter di bawah untuk mencari transaksi spesifik.</CardDescription> */}
+      {/* Komponen Filter (akan menampilkan tombol di mobile) */}
+      <Card className="shadow-medium">
+        <CardHeader className="sm:hidden"> {/* Judul hanya perlu di desktop? Atau bisa disembunyikan total */}
+            <CardTitle className="text-lg flex items-center gap-2">
+                <FilterIcon className="h-5 w-5 text-primary"/>
+                Filter & Pencarian
+            </CardTitle>
         </CardHeader>
-        <CardContent>
-          {/* Gunakan komponen filter */}
+         {/* Di mobile, Card ini hanya berisi tombol trigger Sheet dari ReportFilters */}
+         {/* Di desktop, Card ini berisi form filter */}
+        <CardContent className="pt-4 sm:pt-6">
           <ReportFilters onApplyFilters={handleApplyFilters} />
         </CardContent>
       </Card>
 
-      {/* Card Daftar Transaksi */}
-      {/* Card ini membungkus TransactionList */}
-      <Card>
-         <CardHeader>
-             {/* Judul bisa disederhanakan karena sudah ada H1 di atas */}
-             <CardTitle>Daftar Transaksi</CardTitle>
-             {/* Tombol ekspor dipindahkan ke dalam TransactionList/ReportTable */}
-         </CardHeader>
-         <CardContent>
-            {/* Gunakan komponen list transaksi */}
-            <TransactionList filters={filters} />
-         </CardContent>
-      </Card>
+      {/* Daftar Transaksi (sudah mobile-friendly) */}
+      {/* Tidak perlu dibungkus Card lagi jika TransactionList belum di-card */}
+       <TransactionList filters={filters} /> {/* Langsung render list */}
 
     </div>
   );
