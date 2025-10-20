@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, subMonths, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
-import { useCategories } from "./useCategories";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { useCategories } from "./useCategories.ts";
 
 // Tipe untuk Pie Chart (Pendapatan/Pengeluaran per Kategori)
 export interface PieChartData {
@@ -28,9 +28,9 @@ export function useChartData() {
     const userId = user?.id;
 
     // Ambil semua kategori untuk mapping nama dan warna
-    const { categories: allCategories } = useCategories("income");
+    const { categories: allIncomeCategories } = useCategories("income");
     const { categories: allExpenseCategories } = useCategories("expense");
-    const allUniqueCategories = [...allCategories, ...allExpenseCategories];
+    const allUniqueCategories = [...allIncomeCategories, ...allExpenseCategories];
 
     const queryKey = ["dashboard_charts"];
 
@@ -69,27 +69,38 @@ export function useChartData() {
 
             currentMonthTransactions.forEach(t => {
                 const amount = Number(t.amount);
-                const map = t.type === 'income' ? incomeMap : expenseMap;
-                const current = map.get(t.category_id!) || 0;
-                map.set(t.category_id!, current + amount);
+                if (t.category_id) {
+                    const map = t.type === 'income' ? incomeMap : expenseMap;
+                    const current = map.get(t.category_id!) || 0;
+                    map.set(t.category_id!, current + amount);
+                }
             });
             
-            const mapToPieData = (map: Map<string, number>): PieChartData[] => {
+            const mapToPieData = (map: Map<string, number>, transactionType: 'income' | 'expense'): PieChartData[] => {
                 return Array.from(map.entries())
                     .map(([categoryId, amount]) => {
                         const category = allUniqueCategories.find(c => c.id === categoryId);
+                        
+                        let name = category?.name;
+                        const typeLabel = transactionType === 'income' ? 'Pemasukan' : 'Pengeluaran';
+
+                        // PERBAIKAN KRITIS: Memastikan 'Uncategorized' memiliki nama unik untuk Recharts key.
+                        if (!name) {
+                            name = `Uncategorized (${typeLabel})`;
+                        }
+
                         return {
-                            name: category?.name || 'Uncategorized',
+                            name: name,
                             value: amount,
-                            color: category?.color || (currentMonthTransactions.find(t => t.category_id === categoryId)?.type === 'income' ? '#10B981' : '#EF4444'),
+                            color: category?.color || (transactionType === 'income' ? 'hsl(var(--success))' : 'hsl(var(--danger))'),
                             icon: category?.icon || null,
                         };
                     })
                     .sort((a, b) => b.value - a.value); // Sort descending
             };
 
-            const incomePieData = mapToPieData(incomeMap);
-            const expensePieData = mapToPieData(expenseMap);
+            const incomePieData = mapToPieData(incomeMap, 'income');
+            const expensePieData = mapToPieData(expenseMap, 'expense');
 
             // --- HITUNG DATA COMPARISON CHART (Pemasukan vs Pengeluaran per Bulan) ---
             
@@ -116,10 +127,8 @@ export function useChartData() {
                 },
             ];
 
-            // --- HITUNG DATA TREND LINE CHART (7/30 Hari Terakhir) ---
-            // Kita akan buat data trend harian hanya untuk bulan ini (untuk kesederhanaan)
+            // --- HITUNG DATA TREND LINE CHART (30 Hari Terakhir) ---
 
-            // Menggunakan 30 hari terakhir
             const dayMap = new Map<string, { income: number, expense: number }>();
             const today = new Date();
             

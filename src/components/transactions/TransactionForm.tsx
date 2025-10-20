@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useEffect, useMemo } from "react";
 
-import { useTransactions, Transaction } from "@/hooks/useTransactions.ts";
+import { useTransactions } from "@/hooks/useTransactions.ts";
 import { useCategories } from "@/hooks/useCategories.ts";
 import { useBankAccounts } from "@/hooks/useBankAccounts.ts";
 import { parseFormattedNumber, formatNumberInput } from "@/utils/currency.ts";
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Enums, TablesInsert } from "@/integrations/supabase/types";
+import { Transaction } from "@/hooks/useTransactions.ts"; // Diperlukan untuk tipe defaultValues
 
 // Definisikan tipe transaksi dari Supabase Enums
 type TransactionType = Enums<"transaction_type">;
@@ -43,9 +44,13 @@ const transactionFormSchema = z.object({
   type: z.enum(["income", "expense"], {
     required_error: "Tipe transaksi harus dipilih.",
   }),
-  category_id: z.string().min(1, {
-    message: "Kategori wajib diisi.",
-  }),
+  // category_id harus berupa string yang valid (bukan placeholder UI)
+  category_id: z.string()
+      .min(1, { message: "Kategori wajib diisi." })
+      .refine(val => val !== "select-category", { 
+          message: "Kategori wajib diisi.", 
+          path: ["category_id"] 
+      }),
   amount: z.string().min(1, {
     message: "Jumlah tidak boleh kosong.",
   }).refine(val => parseFormattedNumber(val) > 0, {
@@ -54,7 +59,7 @@ const transactionFormSchema = z.object({
   transaction_date: z.date({
     required_error: "Tanggal transaksi harus diisi.",
   }).max(new Date(), "Tanggal transaksi tidak boleh di masa depan."),
-  // bank_account_id bisa null di DB, tapi di form kita gunakan string "null-value"
+  // bank_account_id menggunakan string placeholder di form
   bank_account_id: z.string().optional().nullable(),
   description: z.string().max(255, "Deskripsi maksimal 255 karakter.").optional().nullable(),
 });
@@ -75,7 +80,8 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
     return defaultValues?.transaction_date ? new Date(defaultValues.transaction_date) : new Date();
   }, [defaultValues]);
 
-  // Konversi null dari DB menjadi "null-value" untuk Select
+  // PERBAIKAN 1: Gunakan string placeholder non-kosong
+  const initialCategoryId = defaultValues?.category_id || "select-category";
   const initialAccountId = defaultValues?.bank_account_id || "null-value";
 
   // 2. Inisialisasi Form
@@ -83,12 +89,13 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
       type: initialType,
-      category_id: defaultValues?.category_id || "",
+      category_id: initialCategoryId,
       amount: defaultValues?.amount ? formatNumberInput(String(defaultValues.amount)) : "",
       transaction_date: initialDate,
       bank_account_id: initialAccountId,
       description: defaultValues?.description || "",
     },
+    mode: "onChange",
   });
 
   const { addTransaction, updateTransaction } = useTransactions({});
@@ -114,8 +121,8 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
 
   // Logic untuk mereset category_id ketika type berubah
   useEffect(() => {
-    // Reset category_id ke default (kosong) ketika type berubah
-    form.setValue("category_id", "", { shouldValidate: true });
+    // PERBAIKAN 2: Reset category_id ke placeholder non-kosong
+    form.setValue("category_id", "select-category", { shouldValidate: true });
     // Reset bank_account_id saat type berubah
     if (!isEditing || defaultValues?.type !== transactionType) {
         form.setValue("bank_account_id", "null-value", { shouldValidate: true });
@@ -129,13 +136,12 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
     const parsedAmount = parseFormattedNumber(values.amount);
 
     try {
-      // Perbaikan: Konversi string "null-value" kembali ke null untuk database
+      // PERBAIKAN 3: Konversi string placeholder kembali ke null untuk database
       const bankAccountId = values.bank_account_id === "null-value" ? null : values.bank_account_id;
       
       const payload: TablesInsert<"transactions"> = {
         type: values.type,
-        // Pastikan category_id tidak null sebelum dikirim
-        category_id: values.category_id, 
+        category_id: values.category_id,
         amount: parsedAmount,
         transaction_date: format(values.transaction_date, "yyyy-MM-dd"),
         bank_account_id: bankAccountId, 
@@ -226,17 +232,22 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
           render={({ field }) => (
             <FormItem>
               <FormLabel>Kategori</FormLabel>
-              {/* field.value di sini dijamin bukan null/undefined karena Zod schema tidak mengizinkan */}
+              {/* field.value dijamin non-kosong oleh defaultValues/useEffect */}
               <Select onValueChange={field.onChange} value={field.value}> 
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih Kategori" />
+                    {/* SelectValue harus menampilkan placeholder jika nilainya adalah string placeholder */}
+                    <SelectValue placeholder="Pilih Kategori" /> 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {/* Perbaikan: Menggunakan string unik "no-category" sebagai placeholder non-kosong */}
+                  {/* PERBAIKAN 4: Item placeholder non-kosong */}
+                  <SelectItem value="select-category" disabled>
+                      Pilih Kategori ({transactionType === 'income' ? 'Pemasukan' : 'Pengeluaran'})
+                  </SelectItem>
+                  
                   {availableCategories.length === 0 ? (
-                    <SelectItem value="no-category" disabled> 
+                    <SelectItem value="no-category" disabled>
                         Belum ada kategori {transactionType}
                     </SelectItem>
                   ) : (
@@ -311,15 +322,16 @@ export function TransactionForm({ defaultValues, onClose, defaultType = "expense
           render={({ field }) => (
             <FormItem>
               <FormLabel>Rekening Bank (Opsional)</FormLabel>
-              {/* Perbaikan: Menggunakan "null-value" untuk mewakili null dari DB/form */}
+              {/* field.value dijamin non-kosong oleh defaultValues/useEffect */}
               <Select onValueChange={field.onChange} value={field.value || "null-value"}> 
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih Rekening Bank" />
+                    {/* SelectValue harus menampilkan placeholder jika nilainya adalah string placeholder */}
+                    <SelectValue placeholder="Pilih Rekening Bank" /> 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {/* Perbaikan: Ganti value="" menjadi "null-value" */}
+                  {/* Item placeholder non-kosong untuk null/unselected */}
                   <SelectItem value="null-value" key="no-account"> 
                     Tidak ada (Tunai/Lainnya)
                   </SelectItem>
