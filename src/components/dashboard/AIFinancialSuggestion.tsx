@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "react"; // <-- IMPORT DITAMBAHKAN DI SINI
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export function AIFinancialSuggestion() {
       setSuggestion(data.suggestion);
       toast.success("AI advice generated successfully!");
     } catch (error: any) {
+      // Tetap log error untuk debugging
       console.error("Error getting financial advice:", error);
       toast.error(error.message || "Failed to get financial advice");
     } finally {
@@ -53,7 +54,8 @@ export function AIFinancialSuggestion() {
         )}
 
         {suggestion && (
-          <div className="rounded-lg bg-muted/50 p-4 whitespace-pre-wrap">
+          // Tambahkan min-h agar card tidak kolaps saat saran pendek
+          <div className="rounded-lg bg-muted/50 p-4 whitespace-pre-wrap min-h-[80px]">
             {suggestion}
           </div>
         )}
