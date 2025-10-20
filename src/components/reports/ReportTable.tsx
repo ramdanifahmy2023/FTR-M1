@@ -6,6 +6,7 @@ import { formatCurrency } from "@/utils/currency";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { FileText, Download } from "lucide-react";
+import { exportToPDF, exportToCSV } from "@/lib/exportUtils"; // <-- IMPORT BARU
 import {
     Table,
     TableBody,
@@ -52,7 +53,19 @@ export function ReportTable({ filters }: ReportTableProps) {
 
         return { totalIncome, totalExpense, netFlow };
     }, [transactions]);
+// <-- Fungsi Handler untuk Tombol Ekspor -->
+    const handleExportPDF = () => {
+        if (transactions.length > 0) {
+            exportToPDF(transactions, filters, totalSummary);
+        }
+    };
 
+    const handleExportCSV = () => {
+        if (transactions.length > 0) {
+            exportToCSV(transactions);
+        }
+    };
+    // <-- Akhir Fungsi Handler -->
     if (isLoading) {
         return <Skeleton className="w-full h-[500px]" />;
     }
