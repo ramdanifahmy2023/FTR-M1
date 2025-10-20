@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react"; // <-- TAMBAHKAN 'React' DAN 'useEffect' DI SINI
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { MoreHorizontal, Pencil, Trash2, Wallet, Tag, FileWarning, CalendarDays, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
@@ -20,14 +20,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { TransactionForm } from "./TransactionForm";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
-import { cn } from "@/lib/utils";
-import { DynamicIcon } from "@/components/ui/dynamic-icon"; // <-- Import DynamicIcon
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; //
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"; //
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"; //
+import { TransactionForm } from "./TransactionForm"; //
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination"; //
+import { cn } from "@/lib/utils"; //
+import { DynamicIcon } from "@/components/ui/dynamic-icon"; //
+// ... (interface dan type tetap sama)
 interface TransactionListProps {
     filters: ReportFilterValues;
 }
@@ -39,6 +39,7 @@ interface SortConfig {
 }
 
 export function TransactionList({ filters }: TransactionListProps) {
+    // ... (state, hooks, memo, handlers tetap sama)
     const isMobile = useIsMobile();
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -67,9 +68,26 @@ export function TransactionList({ filters }: TransactionListProps) {
                     aValue = a.categories?.name?.toLowerCase() || '';
                     bValue = b.categories?.name?.toLowerCase() || '';
                 } else {
-                    aValue = a[sortConfig.key as keyof Transaction];
-                    bValue = b[sortConfig.key as keyof Transaction];
+                    // Pastikan key ada di object sebelum mengakses
+                    const key = sortConfig.key as keyof Transaction;
+                    aValue = key in a ? a[key] : '';
+                    bValue = key in b ? b[key] : '';
                 }
+
+                // Handle specific types for sorting
+                 if (sortConfig.key === 'transaction_date') {
+                    aValue = new Date(a.transaction_date + 'T00:00:00').getTime(); // Ensure correct date parsing
+                    bValue = new Date(b.transaction_date + 'T00:00:00').getTime();
+                 } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                 } else if (typeof aValue !== typeof bValue) {
+                     // Handle mixed types if necessary, e.g., prioritize numbers
+                     aValue = String(aValue);
+                     bValue = String(bValue);
+                 }
+
+
                 if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
                 if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
                 return 0;
@@ -86,9 +104,11 @@ export function TransactionList({ filters }: TransactionListProps) {
 
     const totalPages = Math.ceil(sortedTransactions.length / ITEMS_PER_PAGE);
 
-    useMemo(() => {
-        setCurrentPage(1);
-    }, [filters, totalPages, sortConfig]);
+    // Reset halaman saat filter berubah (lebih baik dari useMemo)
+     React.useEffect(() => { // <-- GUNAKAN React.useEffect
+         setCurrentPage(1);
+     }, [filters, sortConfig]);
+
 
     const handleEdit = (transaction: Transaction) => {
         setEditingTransaction(transaction);
@@ -107,10 +127,11 @@ export function TransactionList({ filters }: TransactionListProps) {
             direction = 'descending';
         }
         setSortConfig({ key, direction });
-        setCurrentPage(1);
+        // setCurrentPage(1); // Dipindahkan ke useEffect
     };
 
     const renderPaginationItems = () => {
+         // ... (logika render pagination tetap sama) ...
          const pageItems = [];
         const maxPagesToShow = 5;
         const halfMaxPages = Math.floor(maxPagesToShow / 2);
@@ -164,12 +185,14 @@ export function TransactionList({ filters }: TransactionListProps) {
     };
 
     const getSortIcon = (columnKey: keyof Transaction | 'categories.name') => {
+        // ... (logika getSortIcon tetap sama) ...
         if (sortConfig.key !== columnKey) return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/50" />;
         if (sortConfig.direction === 'ascending') return <ArrowUp className="ml-2 h-3 w-3" />;
         return <ArrowDown className="ml-2 h-3 w-3" />;
     };
 
     if (isLoading) {
+        // ... (skeleton loading tetap sama) ...
         const skeletonCount = isMobile ? 4 : 5;
         return (
             <div className="space-y-4">
@@ -180,9 +203,10 @@ export function TransactionList({ filters }: TransactionListProps) {
 
     return (
         <>
-            {/* --- Tampilan Mobile (Card Layout - KODE LENGKAP) --- */}
+            {/* Tampilan Mobile (Card Layout) */}
             {isMobile && (
                 <div className="space-y-3">
+                    {/* ... (kode card mobile tetap sama) ... */}
                     {paginatedTransactions.length === 0 ? (
                          <Card className="shadow-none border-dashed">
                            <CardContent className="pt-6 text-center space-y-2 flex flex-col items-center justify-center min-h-[150px]">
@@ -212,15 +236,27 @@ export function TransactionList({ filters }: TransactionListProps) {
                                          </DropdownMenuTrigger>
                                          <DropdownMenuContent align="end">
                                              <DropdownMenuItem onClick={() => handleEdit(t)} className="cursor-pointer"> <Pencil className="mr-2 h-4 w-4" /> Edit </DropdownMenuItem>
+                                             {/* --- PERBAIKAN TRIGGER HAPUS MOBILE --- */}
                                              <AlertDialog>
                                                  <AlertDialogTrigger asChild>
-                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive cursor-pointer"> <Trash2 className="mr-2 h-4 w-4" /> Hapus </DropdownMenuItem>
+                                                      <button className={cn(
+                                                        // Style mirip DropdownMenuItem
+                                                        "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors w-full",
+                                                        "text-destructive focus:bg-accent focus:text-destructive", // Warna destructive
+                                                        "cursor-pointer" // Pointer cursor
+                                                      )}
+                                                      onClick={(e) => e.stopPropagation()} // Optional
+                                                      onSelect={(e) => e.preventDefault()} // Penting
+                                                      >
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                                      </button>
                                                  </AlertDialogTrigger>
                                                   <AlertDialogContent>
                                                      <AlertDialogHeader> <AlertDialogTitle>Hapus Transaksi?</AlertDialogTitle> <AlertDialogDescription> Anda yakin ingin menghapus transaksi ini? Aksi ini tidak dapat dibatalkan. </AlertDialogDescription> </AlertDialogHeader>
                                                      <AlertDialogFooter> <AlertDialogCancel>Batal</AlertDialogCancel> <AlertDialogAction onClick={() => handleDelete(t.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction> </AlertDialogFooter>
                                                  </AlertDialogContent>
                                              </AlertDialog>
+                                             {/* --- AKHIR PERBAIKAN --- */}
                                          </DropdownMenuContent>
                                      </DropdownMenu>
                                 </CardContent>
@@ -229,10 +265,8 @@ export function TransactionList({ filters }: TransactionListProps) {
                     )}
                 </div>
             )}
-            {/* --- AKHIR Tampilan Mobile --- */}
 
-
-            {/* Tampilan Desktop (Table Layout - Tambah Sorting) */}
+            {/* Tampilan Desktop (Table Layout) */}
             {!isMobile && (
                 <div className="rounded-md border">
                     <Table>
@@ -241,8 +275,8 @@ export function TransactionList({ filters }: TransactionListProps) {
                                 <TableHead className="w-[120px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('transaction_date')}> <div className="flex items-center"> Tanggal {getSortIcon('transaction_date')} </div> </TableHead>
                                 <TableHead className="w-[100px]">Tipe</TableHead>
                                 <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('categories.name')}> <div className="flex items-center"> Kategori {getSortIcon('categories.name')} </div> </TableHead>
-                                <TableHead className="hidden lg:table-cell">Deskripsi</TableHead>
-                                <TableHead className="hidden md:table-cell">Rekening</TableHead>
+                                <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('description')}>Deskripsi {getSortIcon('description')}</TableHead> {/* Sort description */}
+                                <TableHead className="hidden md:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('bank_account_id')}>Rekening {getSortIcon('bank_account_id')}</TableHead> {/* Sort account */}
                                 <TableHead className="text-right w-[150px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('amount')}> <div className="flex items-center justify-end"> Jumlah {getSortIcon('amount')} </div> </TableHead>
                                 <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
@@ -263,12 +297,27 @@ export function TransactionList({ filters }: TransactionListProps) {
                                         <TableCell className="py-3 hidden md:table-cell">{t.bank_accounts?.account_name || 'Tunai/Lainnya'}</TableCell>
                                         <TableCell className={cn('text-right font-medium tabular-nums py-3', t.type === 'income' ? 'text-success' : 'text-danger')}> {formatCurrency(t.amount)} </TableCell>
                                         <TableCell className="py-2">
+                                            {/* --- PERBAIKAN TRIGGER HAPUS DESKTOP --- */}
                                             <DropdownMenu>
-                                                <DropdownMenuTrigger asChild> <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"> <MoreHorizontal className="h-4 w-4" /> </Button> </DropdownMenuTrigger>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"> <MoreHorizontal className="h-4 w-4" /> </Button>
+                                                </DropdownMenuTrigger>
                                                  <DropdownMenuContent align="end">
                                                      <DropdownMenuItem onClick={() => handleEdit(t)} className="cursor-pointer"> <Pencil className="mr-2 h-4 w-4" /> Edit </DropdownMenuItem>
                                                      <AlertDialog>
-                                                         <AlertDialogTrigger asChild> <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive cursor-pointer"> <Trash2 className="mr-2 h-4 w-4" /> Hapus </DropdownMenuItem> </AlertDialogTrigger>
+                                                         <AlertDialogTrigger asChild>
+                                                              <button className={cn(
+                                                                // Style mirip DropdownMenuItem
+                                                                "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors w-full",
+                                                                "text-destructive focus:bg-accent focus:text-destructive", // Warna destructive
+                                                                "cursor-pointer" // Pointer cursor
+                                                              )}
+                                                              onClick={(e) => e.stopPropagation()} // Optional
+                                                              onSelect={(e) => e.preventDefault()} // Penting
+                                                              >
+                                                                <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                                              </button>
+                                                         </AlertDialogTrigger>
                                                          <AlertDialogContent>
                                                              <AlertDialogHeader> <AlertDialogTitle>Hapus Transaksi?</AlertDialogTitle> <AlertDialogDescription> Anda yakin ingin menghapus transaksi ini? Aksi ini tidak dapat dibatalkan. </AlertDialogDescription> </AlertDialogHeader>
                                                              <AlertDialogFooter> <AlertDialogCancel>Batal</AlertDialogCancel> <AlertDialogAction onClick={() => handleDelete(t.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction> </AlertDialogFooter>
@@ -276,6 +325,7 @@ export function TransactionList({ filters }: TransactionListProps) {
                                                      </AlertDialog>
                                                  </DropdownMenuContent>
                                             </DropdownMenu>
+                                            {/* --- AKHIR PERBAIKAN --- */}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -295,6 +345,7 @@ export function TransactionList({ filters }: TransactionListProps) {
             )}
 
             {/* Sheet for Editing Transaction */}
+            {/* ... (kode Sheet tetap sama) ... */}
             <Sheet open={isSheetOpen} onOpenChange={(open) => { setIsSheetOpen(open); if (!open) setEditingTransaction(null); }}>
                 <SheetContent side="right" className="sm:max-w-lg">
                     <SheetHeader>

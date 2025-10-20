@@ -273,11 +273,24 @@ export function ReportTable({ filters }: ReportTableProps) {
                                   )}
                              </TableBody>
                               {transactions.length > 0 && (
-                                 <TableFooter className="sticky bottom-0 bg-muted/80 z-10 font-bold">
-                                      <TableRow> <TableCell colSpan={5} className="text-right py-3">Total Pemasukan</TableCell> <TableCell className="text-right text-success py-3 tabular-nums"> {formatCurrency(totalSummary.totalIncome)} </TableCell> </TableRow>
-                                      <TableRow> <TableCell colSpan={5} className="text-right py-3">Total Pengeluaran</TableCell> <TableCell className="text-right text-danger py-3 tabular-nums"> {formatCurrency(totalSummary.totalExpense)} </TableCell> </TableRow>
-                                      <TableRow className="bg-muted hover:bg-muted border-t-2"> <TableCell colSpan={5} className="text-right text-lg py-3">Arus Bersih</TableCell> <TableCell className={cn('text-right text-lg py-3 tabular-nums', totalSummary.netFlow >= 0 ? 'text-primary' : 'text-destructive')}> {formatCurrency(totalSummary.netFlow)} </TableCell> </TableRow>
-                                 </TableFooter>
+                           <TableFooter className="sticky bottom-0 bg-muted/80 z-10 font-bold">
+                                {/* Hapus spasi/baris baru SEBELUM TableCell/TableHead jika ada */}
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-right py-3">Total Pemasukan</TableCell>
+                                    <TableCell className="text-right text-success py-3 tabular-nums">{formatCurrency(totalSummary.totalIncome)}</TableCell>
+                                </TableRow>
+                                {/* Hapus spasi/baris baru DI ANTARA TableRow jika ada */}
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-right py-3">Total Pengeluaran</TableCell>
+                                    <TableCell className="text-right text-danger py-3 tabular-nums">{formatCurrency(totalSummary.totalExpense)}</TableCell>
+                                </TableRow>
+                                {/* Hapus spasi/baris baru DI ANTARA TableRow jika ada */}
+                                <TableRow className="bg-muted hover:bg-muted border-t-2">
+                                    <TableCell colSpan={5} className="text-right text-lg py-3">Arus Bersih</TableCell>
+                                    <TableCell className={cn('text-right text-lg py-3 tabular-nums', totalSummary.netFlow >= 0 ? 'text-primary' : 'text-destructive')}>{formatCurrency(totalSummary.netFlow)}</TableCell>
+                                </TableRow>
+                                {/* Hapus spasi/baris baru SETELAH TableRow terakhir jika ada */}
+                           </TableFooter>
                              )}
                          </Table>
                      </div>
