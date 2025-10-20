@@ -1,3 +1,5 @@
+// src/components/dashboard/CategoryPieChart.tsx
+
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, Tag, FileText } from 'lucide-react';
 
@@ -6,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { PieChartData } from '@/hooks/useChartData';
 import { formatCurrency } from '@/utils/currency';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from "@/lib/utils"; // <-- Import cn untuk class conditional
+import { cn } from "@/lib/utils"; // <-- Pastikan cn diimpor
 
 interface CategoryPieChartProps {
     data: PieChartData[];
@@ -14,7 +16,7 @@ interface CategoryPieChartProps {
     isLoading: boolean;
 }
 
-// Optional: Custom label render function (sama seperti sebelumnya)
+// Custom label render function
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
@@ -24,7 +26,14 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     if (percent < 0.05) return null;
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-semibold pointer-events-none">
+        <text
+            x={x}
+            y={y}
+            fill="white" // Warna teks label (bisa disesuaikan)
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="text-[10px] font-semibold pointer-events-none" // Lebih kecil & bold
+        >
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -34,12 +43,12 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 export function CategoryPieChart({ data, type, isLoading }: CategoryPieChartProps) {
 
     const chartConfig: ChartConfig = data.reduce((config, item) => {
-        // Gunakan item.name sebagai key yang unik
-        const key = item.name.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitasi nama untuk key CSS
+        // Sanitasi nama untuk key CSS (ganti karakter non-alphanumeric dengan _)
+        const key = item.name.replace(/[^a-zA-Z0-9]/g, '_');
         config[key] = {
             label: item.name,
             color: item.color,
-            icon: Tag, // Anda bisa mengganti ini nanti jika ada ikon spesifik
+            icon: Tag, // Default icon, bisa diganti jika data punya ikon spesifik
         };
         return config;
     }, {} as ChartConfig);
@@ -50,97 +59,105 @@ export function CategoryPieChart({ data, type, isLoading }: CategoryPieChartProp
     const colorClass = type === 'income' ? 'text-success' : 'text-danger';
 
     if (isLoading) {
-        return <Skeleton className="h-96 w-full" />;
+        return <Skeleton className="h-96 w-full" />; // Skeleton tetap sama
     }
 
     return (
-        <Card className="shadow-medium flex flex-col h-full"> {/* <-- Tambah flex flex-col h-full */}
-            <CardHeader className="items-center pb-0">
-                <Icon className={colorClass} />
+        <Card className="shadow-medium flex flex-col h-full"> {/* <-- Layout flex kolom, tinggi penuh */}
+            <CardHeader className="items-center pb-0"> {/* Padding bawah dikurangi */}
+                <Icon className={cn("h-5 w-5", colorClass)} /> {/* Ukuran ikon konsisten */}
                 <CardTitle>{title}</CardTitle>
-                {/* Deskripsi tidak ditampilkan jika total 0 */}
+                {/* Deskripsi hanya jika ada total > 0 */}
                 {totalValue > 0 && <CardDescription>Total {formatCurrency(totalValue)}</CardDescription>}
             </CardHeader>
-            <CardContent className="flex-1 flex items-center justify-center pt-0"> {/* <-- Tambah flex-1 flex items-center justify-center */}
+            <CardContent className="flex-1 flex items-center justify-center pt-0"> {/* <-- Konten mengisi sisa ruang & center */}
                 {data.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center h-full text-muted-foreground py-10"> {/* <-- Tambah text-center h-full py-10 */}
-                        <FileText className="h-8 w-8 mb-2" />
-                        <p>Tidak ada data {type} untuk ditampilkan pada periode ini.</p>
+                    // --- Empty State Lebih Baik ---
+                    <div className="flex flex-col items-center justify-center text-center h-full text-muted-foreground py-10">
+                        <FileText className="h-10 w-10 mb-3 text-primary/50" /> {/* Ikon lebih besar */}
+                        <p className="font-medium">Tidak ada data {type === 'income' ? 'pemasukan' : 'pengeluaran'}</p>
+                        <p className="text-sm">Belum ada transaksi untuk periode ini.</p>
                     </div>
+                    // --- Akhir Empty State ---
                 ) : (
-                    <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[250px] w-full"> {/* <-- Tambah w-full */}
-                        {/* Ganti ResponsiveContainer dengan PieChart langsung */}
-                        <PieChart>
+                    <ChartContainer
+                        config={chartConfig}
+                        className="mx-auto aspect-square h-[250px] w-full max-w-[250px] sm:max-w-[300px]" // Maksimum lebar ditambahkan
+                    >
+                        <PieChart> {/* Ganti ResponsiveContainer ke PieChart langsung jika ChartContainer sudah responsif */}
                              <Tooltip
-                                cursor={false} // Nonaktifkan cursor default tooltip
-                                content={({ active, payload }) => (
+                                cursor={false}
+                                content={({ active, payload }) =>
                                     active && payload && payload.length ? (
                                         <ChartTooltipContent
-                                            // label={payload[0].payload.name} // Label bisa diambil dari payload jika perlu
                                             payload={payload}
-                                            hideLabel // Sembunyikan label default tooltip
-                                            formatter={(value, name) =>
-                                                <div className='flex justify-between w-full gap-4'>
-                                                    <span className="text-muted-foreground mr-2">{name}</span>
-                                                    <span className={`font-bold ${colorClass}`}>{formatCurrency(value as number)}</span>
+                                            hideLabel // Sembunyikan label default
+                                            formatter={(value, name) => ( // Custom formatter
+                                                <div className='flex justify-between items-center w-full gap-4'>
+                                                    {/* Nama kategori dari config (label) */}
+                                                    <span className="text-muted-foreground mr-2">{chartConfig[name]?.label || name}</span>
+                                                    {/* Nilai dengan warna sesuai tipe */}
+                                                    <span className={cn('font-bold tabular-nums', colorClass)}>
+                                                        {formatCurrency(value as number)}
+                                                    </span>
                                                 </div>
-                                            }
+                                            )}
                                             className='min-w-[150px]' // Sedikit lebih lebar
-                                            indicator="dot" // Gunakan dot indicator
+                                            indicator="dot" // Gunakan dot
                                         />
                                     ) : null
-                                )}
+                                }
                             />
                             <Pie
                                 data={data}
                                 dataKey="value"
-                                nameKey="name"
+                                nameKey="name" // Pastikan nameKey sesuai dengan key di data
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={70} // <-- PERBESAR innerRadius untuk efek Donut
-                                outerRadius={100} // <-- Sedikit perbesar outerRadius
-                                fill="#8884d8"
+                                innerRadius={70} // Lubang lebih besar
+                                outerRadius={100} // Radius luar sedikit lebih besar
+                                paddingAngle={5} // Jarak antar irisan
                                 labelLine={false}
-                                label={renderCustomizedLabel} // Gunakan fungsi render label custom
-                                paddingAngle={5}
-                                strokeWidth={2} // Tambah sedikit stroke antar irisan
+                                label={renderCustomizedLabel} // Label custom
+                                strokeWidth={2} // Stroke antar irisan
                             >
                                 {data.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
                                         fill={entry.color}
-                                        stroke={"hsl(var(--card))"} // Gunakan warna card background untuk stroke
-                                        className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" // Tambah style focus
+                                        stroke={"hsl(var(--card))"} // Warna stroke = background card
+                                        className="focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background" // Style focus
                                     />
                                 ))}
-
-                                {/* --- TAMBAHKAN TEKS TOTAL DI TENGAH --- */}
-                                <text
-                                    x="50%"
-                                    y="50%"
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    className="fill-foreground text-xl font-bold"
-                                >
-                                    {formatCurrency(totalValue)}
-                                </text>
-                                <text
-                                    x="50%"
-                                    y="50%"
-                                    dy="1.2em" // Posisi sedikit di bawah total
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    className="fill-muted-foreground text-xs"
-                                >
-                                    Total
-                                </text>
-                                {/* --- AKHIR TEKS TOTAL DI TENGAH --- */}
                             </Pie>
-                             <Legend
+
+                            {/* --- Teks Total di Tengah --- */}
+                            <text
+                                x="50%"
+                                y="50%"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className="fill-foreground text-xl font-bold" // Lebih besar & bold
+                            >
+                                {formatCurrency(totalValue)}
+                            </text>
+                            <text
+                                x="50%"
+                                y="50%"
+                                dy="1.2em" // Posisi di bawah total
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className="fill-muted-foreground text-xs" // Warna muted
+                            >
+                                Total
+                            </text>
+                            {/* --- Akhir Teks Total --- */}
+
+                            <Legend
                                 content={<ChartLegendContent />}
-                                verticalAlign="bottom"
-                                align="center"
-                                wrapperStyle={{ paddingTop: '15px' }} // Beri jarak dari chart
+                                verticalAlign="top" // Pindah ke atas
+                                align="center" // Tetap di tengah
+                                wrapperStyle={{ paddingTop: '5px', paddingBottom: '15px' }} // Atur padding
                             />
                         </PieChart>
                     </ChartContainer>

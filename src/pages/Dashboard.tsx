@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom"; // <-- Import useNavigate
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CategorySummaryTable } from "@/components/dashboard/CategorySummaryTable";
+import { CategorySummaryTable } from "@/components/dashboard/CategorySummaryTable"; // Impor tabel ringkasan
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/currency";
 import { AIFinancialSuggestion } from "@/components/dashboard/AIFinancialSuggestion";
@@ -15,8 +15,9 @@ import {
   Wallet,
   Briefcase,
   Calendar,
-  Plus, // <-- Import Plus
-  Minus // <-- Import Minus
+  Plus,
+  Minus,
+  FileWarning // Impor FileWarning untuk skeleton
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,36 +27,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Import Dialog components for Quick Add
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogDescription,
-    DialogTrigger // <-- Import DialogTrigger
+    DialogTrigger
 } from "@/components/ui/dialog";
-// Import Tabs and TransactionForm for Quick Add
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useChartData } from "@/hooks/useChartData.ts";
-import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart.tsx";
-import { ComparisonBarChart } from "@/components/dashboard/ComparisonBarChart.tsx";
-import { DailyTrendLineChart } from "@/components/dashboard/DailyTrendLineChart.tsx";
+import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart.tsx"; // Impor Pie Chart
+import { ComparisonBarChart } from "@/components/dashboard/ComparisonBarChart.tsx"; // Impor Bar Chart
+import { DailyTrendLineChart } from "@/components/dashboard/DailyTrendLineChart.tsx"; // Impor Line/Area Chart
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const [period, setPeriod] = useState<string>("this-month");
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false); // <-- State for Quick Add modal
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const queryClient = useQueryClient();
-  const navigate = useNavigate(); // <-- Initialize useNavigate
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { stats, isLoading: loadingStats } = useDashboardStats(period);
   const { chartData, isLoading: loadingCharts } = useChartData();
+  // Kombinasikan state loading
   const isDataLoading = loadingStats || loadingCharts;
 
-  // Realtime Subscription Effect (console.log dihapus)
+  // Realtime Subscription Effect (untuk update data otomatis)
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -63,16 +63,16 @@ export default function Dashboard() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
-        (_payload) => { // Payload tidak digunakan
-          // Invalidate queries untuk refresh data
+        (_payload) => {
+          // Invalidate queries untuk refresh data saat ada perubahan transaksi
           queryClient.invalidateQueries({ queryKey: ['dashboard_charts'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard_stats', period] });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
-          queryClient.invalidateQueries({ queryKey: ['bank_accounts']}); // Refresh saldo bank
-          queryClient.invalidateQueries({ queryKey: ['assets']}); // Refresh aset jika relevan
+          queryClient.invalidateQueries({ queryKey: ['bank_accounts']});
+          queryClient.invalidateQueries({ queryKey: ['assets']});
         }
       )
-      .subscribe(); // Hapus callback status jika tidak perlu log
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -82,6 +82,7 @@ export default function Dashboard() {
   // Fungsi untuk menutup modal Quick Add
   const closeQuickAddDialog = () => setIsQuickAddOpen(false);
 
+  // Data untuk kartu ringkasan
   const statCards = [
     { title: "Total Income", value: stats.totalIncome, icon: TrendingUp, gradient: "gradient-success", textColor: "text-success" },
     { title: "Total Expense", value: stats.totalExpense, icon: TrendingDown, gradient: "gradient-danger", textColor: "text-danger" },
@@ -89,26 +90,36 @@ export default function Dashboard() {
     { title: "Total Assets", value: stats.totalAssets, icon: Briefcase, gradient: "gradient-primary", textColor: "text-primary" },
   ];
 
-  // Skeleton Loading
+  // --- Skeleton Loading State ---
    if (isDataLoading && !chartData?.trendData.length && !stats.totalIncome && !stats.totalExpense) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-pulse"> {/* Tambah animasi pulse */}
+          {/* Header Skeleton */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Skeleton className="h-9 w-48" />
-            <Skeleton className="h-10 w-[180px]" />
+            <Skeleton className="h-10 w-full sm:w-[180px]" /> {/* Lebar penuh di mobile */}
           </div>
+          {/* Stats Cards Skeleton */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-lg" />)}
           </div>
-          <Skeleton className="h-96 w-full" />
-          <Skeleton className="h-64 w-full" />
+          {/* Charts Skeleton (Contoh 3 chart) */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Skeleton className="h-80 w-full rounded-lg" />
+            <Skeleton className="h-80 w-full rounded-lg" />
+            <Skeleton className="h-80 w-full rounded-lg lg:col-span-2" /> {/* Chart Trend */}
+          </div>
+          {/* Table Skeleton */}
+          <Skeleton className="h-64 w-full rounded-lg" />
+          {/* Welcome & AI Skeleton */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-48 w-full rounded-lg" />
           </div>
         </div>
       );
     }
+  // --- Akhir Skeleton Loading State ---
 
   return (
     <div className="space-y-6">
@@ -116,7 +127,7 @@ export default function Dashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <Select value={period} onValueChange={setPeriod}>
-           <SelectTrigger className="w-full sm:w-[180px]">
+           <SelectTrigger className="w-full sm:w-[180px]"> {/* Lebar penuh di mobile */}
             <Calendar className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
@@ -137,12 +148,13 @@ export default function Dashboard() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <div className={`rounded-full p-2 ${stat.gradient}`}>
+              <div className={`rounded-full p-1.5 ${stat.gradient}`}> {/* Padding sedikit dikurangi */}
                 <stat.icon className="h-4 w-4 text-white" />
               </div>
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${stat.textColor}`}>
+                {/* Tampilkan skeleton di dalam card jika hanya loadingStats */}
                 {loadingStats ? <Skeleton className="h-8 w-3/4 inline-block" /> : formatCurrency(stat.value)}
               </div>
             </CardContent>
@@ -152,6 +164,7 @@ export default function Dashboard() {
 
       {/* Chart Section */}
       <div className="grid gap-4 lg:grid-cols-2">
+         {/* Pie Charts */}
          <CategoryPieChart
               data={chartData.incomePieData}
               type="income"
@@ -162,12 +175,18 @@ export default function Dashboard() {
               type="expense"
               isLoading={loadingCharts && !chartData.expensePieData?.length}
           />
-          <div className={(chartData.incomePieData?.length || chartData.expensePieData?.length) ? "lg:col-span-1" : "lg:col-span-2"}>
-            <ComparisonBarChart
-                data={chartData.comparisonData}
-                isLoading={loadingCharts && !chartData.comparisonData?.length}
-            />
-          </div>
+          {/* Comparison Bar Chart (Lebar penuh jika salah satu pie kosong?) */}
+           {/* Tampilkan Comparison jika ada data, atau jika masih loading */}
+           {(chartData.comparisonData?.some(d => d.currentMonth > 0 || d.previousMonth > 0) || loadingCharts) && (
+               <div className="lg:col-span-1">
+                   <ComparisonBarChart
+                       data={chartData.comparisonData}
+                       isLoading={loadingCharts && !chartData.comparisonData?.length}
+                   />
+               </div>
+           )}
+
+          {/* Daily Trend Line/Area Chart (selalu lebar penuh di bawah) */}
           <div className="lg:col-span-2">
               <DailyTrendLineChart
                   data={chartData.trendData}
@@ -176,7 +195,7 @@ export default function Dashboard() {
           </div>
       </div>
 
-      {/* Tabel Ringkasan Kategori */}
+      {/* Tabel Ringkasan Kategori (Sudah dibuat mobile-friendly) */}
       <CategorySummaryTable period={period} />
 
       {/* Welcome Card & AI Suggestion */}
