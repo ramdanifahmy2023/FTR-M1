@@ -83,7 +83,7 @@ export function ReportTable({ filters }: ReportTableProps) {
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'transaction_date', direction: 'descending' });
 
     const transactionFilters = useMemo(() => ({
-        // ... (filter tetap sama) ...
+      // ... (filter tetap sama) ...
         startDate: filters.dateRange?.from ? format(filters.dateRange.from, 'yyyy-MM-dd') : undefined,
         endDate: filters.dateRange?.to ? format(filters.dateRange.to, 'yyyy-MM-dd') : undefined,
         type: filters.type === 'all' ? undefined : filters.type,
@@ -92,56 +92,74 @@ export function ReportTable({ filters }: ReportTableProps) {
         searchQuery: filters.searchQuery || undefined,
     }), [filters]);
 
-    const { transactions, isLoading } = useTransactions(transactionFilters);
+    // !! PENTING: Ambil isLoading, transactions, DAN data mentah (jika ada error handling)
+    const { transactions, isLoading, error } = useTransactions(transactionFilters);
 
     // Sorting (tetap sama)
     const sortedTransactions = useMemo(() => {
         // ... (logika sorting tetap sama) ...
-        let sortableItems = [...transactions];
+        let sortableItems = [...(transactions || [])]; // Handle jika transactions undefined/null saat loading/error
         if (sortConfig.key !== null) {
-            sortableItems.sort((a, b) => {
-                let aValue: any;
-                let bValue: any;
-                if (sortConfig.key === 'categories.name') {
-                    aValue = a.categories?.name?.toLowerCase() || '';
-                    bValue = b.categories?.name?.toLowerCase() || '';
-                } else if (sortConfig.key === 'bank_accounts.account_name') {
-                    aValue = a.bank_accounts?.account_name?.toLowerCase() || '';
-                    bValue = b.bank_accounts?.account_name?.toLowerCase() || '';
-                } else if (sortConfig.key in a && sortConfig.key in b) {
-                     if (sortConfig.key === 'transaction_date') {
-                        aValue = new Date(a.transaction_date).getTime();
-                        bValue = new Date(b.transaction_date).getTime();
-                     } else if (sortConfig.key === 'amount') {
-                         aValue = a.amount;
-                         bValue = b.amount;
-                     } else {
-                         aValue = String(a[sortConfig.key as keyof Transaction] || '').toLowerCase();
-                         bValue = String(b[sortConfig.key as keyof Transaction] || '').toLowerCase();
-                     }
-                } else {
-                    aValue = '';
-                    bValue = '';
-                }
-                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-                return 0;
-            });
+             sortableItems.sort((a, b) => {
+                 let aValue: any;
+                 let bValue: any;
+                 if (sortConfig.key === 'categories.name') {
+                     aValue = a.categories?.name?.toLowerCase() || '';
+                     bValue = b.categories?.name?.toLowerCase() || '';
+                 } else if (sortConfig.key === 'bank_accounts.account_name') {
+                     aValue = a.bank_accounts?.account_name?.toLowerCase() || '';
+                     bValue = b.bank_accounts?.account_name?.toLowerCase() || '';
+                 } else if (sortConfig.key in a && sortConfig.key in b) {
+                      if (sortConfig.key === 'transaction_date') {
+                         // Pastikan parsing tanggal benar
+                         aValue = new Date(a.transaction_date + 'T00:00:00').getTime();
+                         bValue = new Date(b.transaction_date + 'T00:00:00').getTime();
+                      } else if (sortConfig.key === 'amount') {
+                          aValue = a.amount;
+                          bValue = b.amount;
+                      } else {
+                          aValue = String(a[sortConfig.key as keyof Transaction] || '').toLowerCase();
+                          bValue = String(b[sortConfig.key as keyof Transaction] || '').toLowerCase();
+                      }
+                 } else {
+                     aValue = '';
+                     bValue = '';
+                 }
+                 if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+                 if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+                 return 0;
+             });
         }
         return sortableItems;
     }, [transactions, sortConfig]);
 
-    // Total Summary (tetap sama)
+    // Total Summary (handle jika transactions null/undefined)
     const totalSummary = useMemo(() => {
-        // ... (logika total summary tetap sama) ...
-        const itemsToSum = transactions;
+        const itemsToSum = transactions || []; // Gunakan array kosong jika belum ada data
         const totalIncome = itemsToSum.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const totalExpense = itemsToSum.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
         return { totalIncome, totalExpense, netFlow: totalIncome - totalExpense };
     }, [transactions]);
 
-    const handleExportPDF = () => { if (transactions.length > 0) exportToPDF(transactions, filters, totalSummary); };
-    const handleExportCSV = () => { if (transactions.length > 0) exportToCSV(transactions); };
+    // --- Handler Ekspor ---
+    const handleExportPDF = () => {
+        if (transactions && transactions.length > 0) {
+            exportToPDF(transactions, filters, totalSummary); // Pass data yang relevan
+        } else {
+            // Tampilkan pesan jika tidak ada data
+            // Anda bisa menggunakan toast di sini
+            console.warn("Tidak ada data transaksi untuk diekspor ke PDF.");
+        }
+    };
+    const handleExportCSV = () => {
+        if (transactions && transactions.length > 0) {
+            exportToCSV(transactions); // Pass data yang relevan
+        } else {
+             // Tampilkan pesan jika tidak ada data
+            console.warn("Tidak ada data transaksi untuk diekspor ke CSV.");
+        }
+    };
+    // --- Akhir Handler Ekspor ---
 
     const requestSort = (key: SortableReportKeys) => {
         // ... (logika requestSort tetap sama) ...
@@ -179,6 +197,24 @@ export function ReportTable({ filters }: ReportTableProps) {
         );
     }
 
+    // --- Error Handling Sederhana ---
+    if (error) {
+        return (
+            <Card className="shadow-medium border-destructive">
+                <CardHeader>
+                    <CardTitle className="text-destructive">Gagal Memuat Data</CardTitle>
+                    <CardDescription>Terjadi kesalahan saat mengambil data transaksi.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-destructive-foreground bg-destructive p-3 rounded">{error.message}</p>
+                    {/* Anda bisa menambahkan tombol refresh di sini */}
+                </CardContent>
+            </Card>
+        );
+    }
+    // --- Akhir Error Handling ---
+
+
     const displayTransactions = sortedTransactions;
 
     return (
@@ -186,17 +222,24 @@ export function ReportTable({ filters }: ReportTableProps) {
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between">
                 <div>
                      <CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5 text-primary"/> Rincian Transaksi</CardTitle>
-                    <CardDescription>Total {transactions.length} transaksi ditemukan.</CardDescription>
+                    {/* Tampilkan jumlah transaksi jika ada, atau pesan jika tidak */}
+                    <CardDescription>
+                       {displayTransactions.length > 0
+                          ? `Total ${displayTransactions.length} transaksi ditemukan.`
+                          : "Tidak ada transaksi ditemukan untuk filter ini."}
+                    </CardDescription>
                 </div>
+                {/* --- Tombol Ekspor di sini --- */}
                 <div className="flex space-x-2 mt-4 md:mt-0">
-                    <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={transactions.length === 0}> <Download className="mr-1.5 h-4 w-4" /> PDF </Button>
-                    <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={transactions.length === 0}> <Download className="mr-1.5 h-4 w-4" /> CSV </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={!transactions || transactions.length === 0}> <Download className="mr-1.5 h-4 w-4" /> PDF </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!transactions || transactions.length === 0}> <Download className="mr-1.5 h-4 w-4" /> CSV </Button>
                 </div>
+                 {/* --- Akhir Tombol Ekspor --- */}
             </CardHeader>
             <CardContent>
                  {isMobile ? (
+                    // ... (Tampilan Mobile Card tetap sama) ...
                      <div className="space-y-3">
-                         {/* --- PERBAIKAN Tampilan Mobile --- */}
                          {displayTransactions.length === 0 ? (
                              <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-10">
                                  <FileWarning className="h-8 w-8 mb-2" />
@@ -204,12 +247,10 @@ export function ReportTable({ filters }: ReportTableProps) {
                              </div>
                           ) : (
                              displayTransactions.map((t) => (
-                                // Gunakan komponen MobileTransactionCard
                                 <MobileTransactionCard key={t.id} transaction={t} />
                              ))
                           )}
-                         {/* Footer Total Mobile (jika ada transaksi) */}
-                         {transactions.length > 0 && (
+                         {transactions && transactions.length > 0 && (
                              <Card className="mt-4 bg-muted/50">
                                  <CardContent className="p-4 space-y-2 text-sm">
                                      <div className="flex justify-between font-medium">
@@ -229,22 +270,22 @@ export function ReportTable({ filters }: ReportTableProps) {
                                  </CardContent>
                              </Card>
                          )}
-                         {/* --- AKHIR PERBAIKAN Tampilan Mobile --- */}
                      </div>
                  ) : (
-                     // Tampilan Desktop (Table) - Tetap Sama
+                    // ... (Tampilan Desktop Table tetap sama, pastikan footer hanya muncul jika ada data) ...
                      <div className="relative w-full overflow-auto max-h-[500px] rounded-md border">
                          <Table>
                              <TableHeader className="sticky top-0 bg-background z-10">
-                                 <TableRow>
-                                     <TableHead className="w-[100px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('transaction_date')}> <div className="flex items-center"> Tanggal {getSortIcon('transaction_date')} </div> </TableHead>
-                                     <TableHead className="w-[100px]">Tipe</TableHead>
-                                     <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('categories.name')}> <div className="flex items-center"> Kategori {getSortIcon('categories.name')} </div> </TableHead>
-                                     <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('description')}> <div className="flex items-center"> Deskripsi {getSortIcon('description')} </div> </TableHead>
-                                     <TableHead className="hidden md:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('bank_accounts.account_name')}> <div className="flex items-center"> Rekening {getSortIcon('bank_accounts.account_name')} </div> </TableHead>
-                                     <TableHead className="text-right w-[150px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('amount')}> <div className="flex items-center justify-end"> Jumlah {getSortIcon('amount')} </div> </TableHead>
-                                 </TableRow>
-                             </TableHeader>
+                                <TableRow>
+                                    {/* Make sure headers use requestSort */}
+                                    <TableHead className="w-[100px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('transaction_date')}> <div className="flex items-center"> Tanggal {getSortIcon('transaction_date')} </div> </TableHead>
+                                    <TableHead className="w-[100px]">Tipe</TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('categories.name')}> <div className="flex items-center"> Kategori {getSortIcon('categories.name')} </div> </TableHead>
+                                    <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('description')}> <div className="flex items-center"> Deskripsi {getSortIcon('description')} </div> </TableHead>
+                                    <TableHead className="hidden md:table-cell cursor-pointer hover:bg-muted/50" onClick={() => requestSort('bank_accounts.account_name')}> <div className="flex items-center"> Rekening {getSortIcon('bank_accounts.account_name')} </div> </TableHead>
+                                    <TableHead className="text-right w-[150px] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('amount')}> <div className="flex items-center justify-end"> Jumlah {getSortIcon('amount')} </div> </TableHead>
+                                </TableRow>
+                            </TableHeader>
                              <TableBody>
                                  {displayTransactions.length === 0 ? (
                                     <TableRow>
@@ -263,7 +304,7 @@ export function ReportTable({ filters }: ReportTableProps) {
                                              <TableCell className="flex items-center gap-2 py-3">
                                                  <span className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 border" style={{ backgroundColor: t.categories?.color || 'hsl(var(--muted))' }} />
                                                   <span className="truncate">{t.categories?.name || "Uncategorized"}</span>
-                                                  {t.categories?.icon && <DynamicIcon name={t.categories.icon} className="h-3 w-3 text-muted-foreground ml-auto" />} {/* Tampilkan ikon */}
+                                                  {t.categories?.icon && <DynamicIcon name={t.categories.icon} className="h-3 w-3 text-muted-foreground ml-auto" />}
                                              </TableCell>
                                              <TableCell className="max-w-[200px] truncate py-3 hidden lg:table-cell">{t.description || '-'}</TableCell>
                                              <TableCell className="py-3 hidden md:table-cell">{t.bank_accounts?.account_name || 'Tunai/Lainnya'}</TableCell>
@@ -272,26 +313,24 @@ export function ReportTable({ filters }: ReportTableProps) {
                                      ))
                                   )}
                              </TableBody>
-                              {transactions.length > 0 && (
-                           <TableFooter className="sticky bottom-0 bg-muted/80 z-10 font-bold">
-                                {/* Hapus spasi/baris baru SEBELUM TableCell/TableHead jika ada */}
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-right py-3">Total Pemasukan</TableCell>
-                                    <TableCell className="text-right text-success py-3 tabular-nums">{formatCurrency(totalSummary.totalIncome)}</TableCell>
-                                </TableRow>
-                                {/* Hapus spasi/baris baru DI ANTARA TableRow jika ada */}
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-right py-3">Total Pengeluaran</TableCell>
-                                    <TableCell className="text-right text-danger py-3 tabular-nums">{formatCurrency(totalSummary.totalExpense)}</TableCell>
-                                </TableRow>
-                                {/* Hapus spasi/baris baru DI ANTARA TableRow jika ada */}
-                                <TableRow className="bg-muted hover:bg-muted border-t-2">
-                                    <TableCell colSpan={5} className="text-right text-lg py-3">Arus Bersih</TableCell>
-                                    <TableCell className={cn('text-right text-lg py-3 tabular-nums', totalSummary.netFlow >= 0 ? 'text-primary' : 'text-destructive')}>{formatCurrency(totalSummary.netFlow)}</TableCell>
-                                </TableRow>
-                                {/* Hapus spasi/baris baru SETELAH TableRow terakhir jika ada */}
-                           </TableFooter>
-                             )}
+                              {/* --- Footer hanya jika ada transaksi --- */}
+                              {transactions && transactions.length > 0 && (
+                                   <TableFooter className="sticky bottom-0 bg-muted/80 z-10 font-bold">
+                                       <TableRow>
+                                           <TableCell colSpan={5} className="text-right py-3">Total Pemasukan</TableCell>
+                                           <TableCell className="text-right text-success py-3 tabular-nums">{formatCurrency(totalSummary.totalIncome)}</TableCell>
+                                       </TableRow>
+                                       <TableRow>
+                                           <TableCell colSpan={5} className="text-right py-3">Total Pengeluaran</TableCell>
+                                           <TableCell className="text-right text-danger py-3 tabular-nums">{formatCurrency(totalSummary.totalExpense)}</TableCell>
+                                       </TableRow>
+                                       <TableRow className="bg-muted hover:bg-muted border-t-2">
+                                           <TableCell colSpan={5} className="text-right text-lg py-3">Arus Bersih</TableCell>
+                                           <TableCell className={cn('text-right text-lg py-3 tabular-nums', totalSummary.netFlow >= 0 ? 'text-primary' : 'text-destructive')}>{formatCurrency(totalSummary.netFlow)}</TableCell>
+                                       </TableRow>
+                                   </TableFooter>
+                               )}
+                               {/* --- Akhir Footer --- */}
                          </Table>
                      </div>
                  )}

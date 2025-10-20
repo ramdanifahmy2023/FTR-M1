@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ReportFilters, ReportFilterValues } from "@/components/reports/ReportFilters.tsx";
 import { ReportTable } from "@/components/reports/ReportTable.tsx";
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"; // <-- Import CardDescription
-import { Filter } from "lucide-react"; // <-- Import Filter icon
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { Filter } from "lucide-react";
 
 // Default Filters (Tetap Sama)
 const defaultFilters: ReportFilterValues = {
@@ -26,22 +26,20 @@ export default function Reports() {
     setFilters(newFilters);
   };
 
-  // Tidak perlu displayDateRange di sini lagi
-
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Laporan Keuangan</h1>
 
-      {/* Filter Section (Sedikit perbaikan header) */}
-      <Card className="shadow-medium"> {/* <-- Tambah shadow */}
+      {/* Filter Section (Tetap Sama) */}
+      <Card className="shadow-medium">
         <CardHeader>
              <CardTitle className="text-lg flex items-center gap-2">
-                 <Filter className="h-5 w-5 text-primary"/> {/* <-- Ikon Filter */}
+                 <Filter className="h-5 w-5 text-primary"/>
                  Filter Laporan
              </CardTitle>
              <CardDescription>
                  Pilih kriteria untuk menampilkan data transaksi yang spesifik.
-             </CardDescription> {/* <-- Tambah deskripsi */}
+             </CardDescription>
         </CardHeader>
         <CardContent>
           <ReportFilters onApplyFilters={handleApplyFilters} />
@@ -49,6 +47,7 @@ export default function Reports() {
       </Card>
 
       {/* Report Table Section (Komponen dipanggil langsung) */}
+      {/* Tombol ekspor sudah dipindahkan ke dalam ReportTable */}
       <ReportTable filters={filters} />
     </div>
   );
